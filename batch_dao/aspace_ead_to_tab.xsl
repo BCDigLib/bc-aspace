@@ -19,7 +19,7 @@
                     <xsl:value-of
                         select="normalize-space(//ead:ead/ead:archdesc[@level='collection']/ead:userestrict/ead:p)"/>
                     <xsl:value-of select="$varTab"/>
-                    <xsl:value-of select="//ead:ead/ead:archdesc[@level='collection']/ead:did/ead:unitdate/@normal"/>
+                    <xsl:value-of select="ead:did/ead:unitdate/@normal"/>
                     <xsl:text>
 </xsl:text>
                 </xsl:when>
