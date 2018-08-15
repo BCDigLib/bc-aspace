@@ -54,6 +54,8 @@ def main():
     tab_in = open(tab_file, 'r')
     ead_data = tab_in.read()
     ead_lines = ead_data.splitlines()
+    # make file to save IDs in for IIIF manifest generator
+    ids_for_manifest = open('ids_for_manifest.txt', 'w')
     for line in ead_lines:
         # data from the file
         metadata = line.split("\t")
@@ -85,6 +87,10 @@ def main():
             except KeyError:
                 print("Item " + unique_id + " has no title or date expression. Please check the metadata & try again")
                 sys.exit()
+        try:
+            agent_data = archival_object_json['linked_agents']
+        except KeyError:
+            agent_data = []
         # check for expression type 'single' before looking for both start and end dates
         date_json = create_date_json(archival_object_json, unique_id, collection_dates)
         # use the archival object type to inform the digital object type & language code.
@@ -98,7 +104,8 @@ def main():
                'digital_object_id':'http://hdl.handle.net/2345.2/' + unique_id, 'publish': True, 'notes':[{'content':
                 [use_note], 'type':'userestrict', 'jsonmodel_type':'note_digital_object'},{'content':[dimensions_note],
                 'type':'dimensions', 'jsonmodel_type':'note_digital_object'}, {'content':[format_note], 'type':'note','jsonmodel_type':'note_digital_object'},
-                {'content':[file_type], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json}
+                {'content':[file_type], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
+                'linked_agents':agent_data}
         # format the JSON
         dig_obj_data = json.dumps(dig_obj)
         # Post the digital object
@@ -110,6 +117,10 @@ def main():
         except KeyError:
             print("DO for item " + unique_id + " already exists. Moving to next item in list.")
             continue
+        # save off the ID of the newly created Digital object to feed the IIIF manifest generator
+        id_start = dig_obj_uri.rfind('/')
+        dig_ob_id = dig_obj_uri[(id_start+1):len(dig_obj_uri)]
+        ids_for_manifest.write(dig_ob_id + '\n')
         # Build a new instance to add to the archival object, linking to the digital object
         dig_obj_instance = {'instance_type': 'digital_object', 'digital_object': {'ref': dig_obj_uri}}
         # Append the new instance to the existing archival object record's instances
