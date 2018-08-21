@@ -20,3 +20,8 @@ en:
     file_version_use_statement:
       archive image: archive image
       reference image: reference image
+    subject_source:
+      record_group: Record Group
+      tgm: TGM, Thesaurus for Graphic Materials
+      lctgm: Thesaurus for Graphic Materials I: Subject Terms
+      naf: Library of Congress Name Authority File
