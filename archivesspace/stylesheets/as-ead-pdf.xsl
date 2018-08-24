@@ -7,7 +7,7 @@
         *                                                                 *
         * VERSION:          1.0                                           *
         *                                                                 *
-        * AUTHOR:           Winona Salesky                                *
+        * AUTHOR:           Winona Salesky                                *dao
         *                   wsalesky@gmail.com                            *
         *                                                                 *
         * DATE:             2013-08-21                                    *
@@ -1360,7 +1360,7 @@
                 </xsl:when>
             </xsl:choose>
         </xsl:variable>
-        <fo:basic-link external-destination="url('{@xlink:href}')" xsl:use-attribute-sets="ref">
+        <fo:basic-link show-destination="new" external-destination="url('{@xlink:href}')" xsl:use-attribute-sets="ref">
             <xsl:value-of select="$linkTitle"/>
         </fo:basic-link>
     </xsl:template>
@@ -1701,13 +1701,35 @@
     <!-- Unittitles and all other clevel elements -->
     <xsl:template match="ead:did" mode="dsc">
         <fo:block margin-bottom="0">
-            <xsl:apply-templates select="ead:unittitle"/>
-            <xsl:if test="(string-length(ead:unittitle[1]) &gt; 0) and (string-length(ead:unitdate[1]) &gt; 1) and ead:unittitle[1] != ead:unitdate[1]">, 
-                <xsl:apply-templates select="ead:unitdate" mode="did"/>    </xsl:if>
+            <!-- Add choose block here to format Japanese Prints differently -->
+            <xsl:choose>
+                <xsl:when test="ancestor::ead:archdesc[@level='collection']/ead:did/ead:unittitle='Japanese prints collection'">
+                    <xsl:choose>
+                        <xsl:when test="ead:origination[2]">
+                            <xsl:value-of select="ead:origination[1]/ead:persname"/>
+                            <xsl:text> and </xsl:text>
+                            <xsl:value-of select="ead:origination[2]/ead:persname"/>
+                            <xsl:text>. </xsl:text>
+                            <xsl:value-of select="ead:unittitle"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="ead:origination/ead:persname"/>
+                            <xsl:text>. </xsl:text>
+                            <xsl:value-of select="ead:unittitle"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:apply-templates select="ead:unittitle"/>
+                    <xsl:if test="(string-length(ead:unittitle[1]) &gt; 0) and (string-length(ead:unitdate[1]) &gt; 1) and ead:unittitle[1] != ead:unitdate[1]">, 
+                        <xsl:apply-templates select="ead:unitdate" mode="did"/>    </xsl:if>
+                </xsl:otherwise>
+            </xsl:choose>
+            
         </fo:block> 
         <fo:block margin-bottom="4pt" margin-top="0">
             <xsl:apply-templates select="ead:repository" mode="dsc"/>            
-            <xsl:apply-templates select="ead:origination" mode="dsc"/>            
+            <!-- <xsl:apply-templates select="ead:origination" mode="dsc"/>  -->          
             <xsl:if test="not(ead:unittitle)">
                 <xsl:value-of select="ead:unitdate"/> 
             </xsl:if>
