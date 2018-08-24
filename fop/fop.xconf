@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+
+<!-- This config file should be used to render PDFs outside of ASpace with Apache FOP.
+     Given Arial Unicode.ttf in a fonts directory, it will handle diacritics that the 
+     built-in processor mangles due to missing fonts. 
+     
+     Note that FOP cannot handle XSLT 2.0, so you will first need to generate the FO file 
+     using Saxon: java -jar saxon9he.jar -s:ead.xml -xsl:as-ead-pdf.xsl -o:in.fo
+
+     You can then run FOP with ths config file: fop.bat -c fop.xconf in.fo out.pdf
+     --> 
+
+<fop version="1.0">
+
+  <!-- Base URL for resolving relative URLs -->
+  <base>.</base>
+  
+  <!-- Source resolution in dpi (dots/pixels per inch) for determining the size of pixels in SVG and bitmap images, default: 72dpi -->
+  <source-resolution>72</source-resolution>
+  <!-- Target resolution in dpi (dots/pixels per inch) for specifying the target resolution for generated bitmaps, default: 72dpi -->
+  <target-resolution>72</target-resolution>
+  
+  <!-- Default page-height and page-width, in case value is specified as auto -->
+  <default-page-settings height="11.00in" width="8.50in"/>
+  
+  <!-- Information for specific renderers -->
+  <!-- Uses renderer mime type for renderers -->
+  <renderers>
+    <renderer mime="application/pdf">
+      <filterList>
+        <!-- provides compression using zlib flate (default is on) -->
+        <value>flate</value>
+      </filterList>
+
+      <fonts>
+        <!-- Look for fonts dir relative to conf file (Arial Unicode.ttf should go here) -->
+        <directory>fonts</directory>
+
+        <auto-detect/>
+
+      </fonts>
+
+    </renderer>
+  </renderers>
+
+</fop>
