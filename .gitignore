@@ -10,5 +10,5 @@ output.csv
 output.txt
 *.json
 
-# Exclude manifest exporter conf file
-manifest-export/config.yml
+# Exclude conf files
+config.yml
