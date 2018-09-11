@@ -1,2 +1,3 @@
 aspace_base_uri: # base API URI for your ArchivesSpace instance; e.g., archivesspace.example.org:8089
 aspace_password: # password for your ArchivesSpace instance's admin user
+aspace_repo_id: # repository ID for the resource in question
