@@ -46,6 +46,10 @@ ao_endpoints.each do |ao_endpoint|
   do_tree = JSON.parse(do_tree_response)
   do_tree["children"].each { |child| child["file_versions"].map { |file_version| fnames << file_version["file_uri"] } }
 
-  component_fnames[ao_component_id] = fnames
+  fnames.each { |fname| component_fnames[fname] = ao_component_id }
 end
 
+CSV.open("component_fnames.csv", "wb") do |csv|
+  csv << ["component_unique_id", "filename"]
+  component_fnames.each { |fname, comp_id| csv << [comp_id, fname] }
+end
