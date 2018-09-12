@@ -64,6 +64,9 @@ def main():
         aspace_id = metadata[1]
         id_ref = aspace_id[7:len(aspace_id)]
         collection_dates = metadata[4].split("/")
+        lang_code = metadata[5]
+        genre = metadata[6]
+        type_of_resouce = metadata[7]
         # aspace login info
         auth = requests.post(aspace_url + '/users/' + username + '/login?password=' + password).json()
         session = auth['session']
@@ -93,19 +96,14 @@ def main():
             agent_data = []
         # check for expression type 'single' before looking for both start and end dates
         date_json = create_date_json(archival_object_json, unique_id, collection_dates)
-        # use the archival object type to inform the digital object type & language code.
-        try:
-            types_list = get_lang_code(archival_object_json['instances'][0]['instance_type'], unique_id)
-        except KeyError:
-            print("Item " + unique_id + " has no instance type assigned. Please check the metadata & try again")
-            sys.exit()
         # make the JSON
-        dig_obj = {'jsonmodel_type':'digital_object','title':obj_title, 'digital_object_type':types_list[0], 'language':types_list[1],
-               'digital_object_id':'http://hdl.handle.net/2345.2/' + unique_id, 'publish': True, 'notes':[{'content':
+        dig_obj = {'jsonmodel_type':'digital_object','title':obj_title, 'digital_object_type':
+                get_resource_type(type_of_resouce, id_ref), 'language': lang_code,
+                'digital_object_id': 'http://hdl.handle.net/2345.2/' + unique_id, 'publish': True, 'notes':[{'content':
                 [use_note], 'type':'userestrict', 'jsonmodel_type':'note_digital_object'},{'content':[dimensions_note],
                 'type':'dimensions', 'jsonmodel_type':'note_digital_object'}, {'content':[format_note], 'type':'note','jsonmodel_type':'note_digital_object'},
                 {'content':[file_type], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
-                'linked_agents':agent_data}
+                'linked_agents':agent_data, 'subjects': get_genre_type(genre)}
         # format the JSON
         dig_obj_data = json.dumps(dig_obj)
         # Post the digital object
@@ -207,39 +205,83 @@ def create_date_json(jsontext, itemid, collection_dates):
         return date_json
 
 
-# This function assumes that anything that has linguistic content is in English. May need modifying on some projects.
-def get_lang_code(instance_type, item_id):
+# Sets an Aspace instance type for the DAO based on the typeOfResource assigned in the EAD-to-tab XSL
+def get_resource_type(instance_type, item_id):
     print(instance_type)
-    if instance_type == "audio":
-        return ["sound_recording", "eng"]
-    elif instance_type == "books":
-        return ["text", "eng"]
-    elif instance_type == "computer_disks":
-        return ["software_multimedia", "zxx"]
-    elif instance_type == "graphic material":
-        return["still_image", "zxx"]
-    elif instance_type == "graphic_materials":
-        return["still_image", "zxx"]
-    elif instance_type == "graphic materials":
-        return["still_image", "zxx"]
-    elif instance_type == "maps":
-        return["cartographic", "zxx"]
-    elif instance_type == "mixed_materials":
-        return["mixed_materials", "zxx"]
-    elif instance_type == "mixed materials":
-        return["mixed_materials", "zxx"]
-    elif instance_type == "moving images":
-        return["moving_image", "zxx"]
-    elif instance_type == "moving_images":
-        return["moving_image", "zxx"]
-    elif instance_type == "photographs":
-        return["still_image", "zxx"]
-    elif instance_type == "realia":
-        return["three dimensional object", "zxx"]
-    elif instance_type == "text":
-        return["text", "eng"]
+    if instance_type == "text":
+        return "text"
+    elif instance_type == "cartographic":
+        return "cartographic"
+    elif instance_type == "notated music":
+        return "notated_music"
+    elif instance_type == "sound recording":
+        return "sound_recording"
+    elif instance_type == "sound recording-musical":
+        return "sound_recording_musical"
+    elif instance_type == "sound recording-nonmusical":
+        return "sound_recording_nonmusical"
+    elif instance_type == "still image":
+        return "still_image"
+    elif instance_type == "moving image":
+        return "moving_image"
+    elif instance_type == "three dimensional object":
+        return "three dimensional object"
+    elif instance_type == "software, multimedia":
+        return "software_multimedia"
+    elif instance_type == "mixed material":
+        return "moving_image"
     else:
-        print(item_id + " has an improperly formatted instance type. Please check the metadata & try again.")
+        print(item_id + " has an improperly formatted Digital Commonwealth typeOfResource. Please check the metadata & try again.")
+        sys.exit()
+
+
+# Sets a linked subject for the DAO to hold the Digital Commonwealth genre term based on the value set in the EAD-to-tab
+# XSL. This mapping is based on database IDs for subjects in BC's production Aspace server and WILL NOT WORK for other
+# schools/servers.
+def get_genre_type(dc_genre_term):
+    if dc_genre_term == "Albums":
+        return [{"ref": "/subjects/656"}]
+    elif dc_genre_term == "Books":
+        return [{"ref": "/subjects/657"}]
+    elif dc_genre_term == "Cards":
+        return [{"ref": "/subjects/658"}]
+    elif dc_genre_term == "Correspondence":
+        return [{"ref": "/subjects/669"}]
+    elif dc_genre_term == "Documents":
+        return [{"ref": "/subjects/659"}]
+    elif dc_genre_term == "Drawings":
+        return [{"ref": "/subjects/660"}]
+    elif dc_genre_term == "Ephemera":
+        return [{"ref": "/subjects/661"}]
+    elif dc_genre_term == "Manuscripts":
+        return [{"ref": "/subjects/655"}]
+    elif dc_genre_term == "Maps":
+        return [{"ref": "/subjects/662"}]
+    elif dc_genre_term == "Motion pictures":
+        return [{"ref": "/subjects/668"}]
+    elif dc_genre_term == "Music":
+        return [{"ref": "/subjects/670"}]
+    elif dc_genre_term == "Musical notation":
+        return [{"ref": "/subjects/671"}]
+    elif dc_genre_term == "Newspapers":
+        return [{"ref": "/subjects/672"}]
+    elif dc_genre_term == "Objects":
+        return [{"ref": "/subjects/673"}]
+    elif dc_genre_term == "Paintings":
+        return [{"ref": "/subjects/663"}]
+    elif dc_genre_term == "Periodicals":
+        return [{"ref": "/subjects/664"}]
+    elif dc_genre_term == "Photographs":
+        return [{"ref": "/subjects/665"}]
+    elif dc_genre_term == "Posters":
+        return [{"ref": "/subjects/666"}]
+    elif dc_genre_term == "Prints":
+        return [{"ref": "/subjects/667"}]
+    elif dc_genre_term == "Sound recordings":
+        return [{"ref": "/subjects/674"}]
+    else:
+        print(dc_genre_term + " is an invalid or improperly formatted genre term. Please check the Digital Commonwealth"
+                              " documentation and try again.")
         sys.exit()
 
 
