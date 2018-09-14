@@ -2,6 +2,11 @@ en:
   enumerations:
     extent_type:
       unmeasured_collection: Unmeasured Collection
+    collection_management_processing_priority:
+      magic_high: Magic - High
+      magic_easy: Magic - Easy
+      magic_low: Magic - Low
+      update_ima_number: Update IMA Number
     container_type:
       reel-frame: Reel Frame
       bin: Bin
@@ -15,6 +20,8 @@ en:
       case-drawer: Case Drawer
       barcode: Barcode
       volume: Volume
+    event_event_type:
+      published_materials_transfer: Published Materials Transfer
     file_version_checksum_methods:
       md5-audio-data-only: MD5 audio-data-only
     file_version_use_statement:
@@ -23,5 +30,5 @@ en:
     subject_source:
       record_group: Record Group
       tgm: TGM, Thesaurus for Graphic Materials
-      lctgm: Thesaurus for Graphic Materials I: Subject Terms
+      lctgm: "Thesaurus for Graphic Materials I: Subject Terms"
       naf: Library of Congress Name Authority File
