@@ -7,8 +7,8 @@ Icon
 
 # Exclude output files
 output.csv
-component_fnames.csv
-output.txt
+do_components_techmd.csv
+*.txt
 *.json
 
 # Exclude conf files
