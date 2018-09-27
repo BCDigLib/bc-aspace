@@ -5,9 +5,8 @@
 Icon?
 Icon
 
-# Exclude output files
-output.csv
-do_components_techmd.csv
+# Exclude input/output files
+*.csv
 *.txt
 *.json
 
