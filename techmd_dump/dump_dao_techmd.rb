@@ -38,7 +38,18 @@ do_component_uris.flatten.each do |uri|
   do_component_id = do_component["uri"].split('/').last
   do_id = do_component["digital_object"]["ref"].split('/').last
 
+  file_version = do_component["file_versions"].map { |file_version| file_version }[0]
+  file_uri = file_version["file_uri"]
+  file_size_bytes = file_version["file_size_bytes"]
+  checksum = file_version["checksum"]
+  file_format_name = file_version["file_format_name"]
+
   techmd = do_component["notes"].map { |note| note["content"][0] }
+  techmd << file_uri
+  techmd << file_size_bytes
+  techmd << checksum
+  techmd << file_format_name
+
   techmd.unshift(do_component_title)
         .unshift(do_component_id)
         .unshift(do_id)
@@ -47,8 +58,8 @@ do_component_uris.flatten.each do |uri|
 end
 
 CSV.open("do_components_techmd.csv", "wb") do |csv|
-  csv << ["digital_object_id", "component_id", "component_label", "pixel_dimensions", "resolution", "bits_per_sample", "color_space"]
-  do_components_techmd.each do |techmd|
-    csv << techmd
-  end
+  csv << ["digital_object_id", "component_id", "component_label", "pixel_dimensions", 
+          "resolution", "bits_per_sample", "color_space", "file_uri", "file_size_bytes", 
+          "checksum", "file_format_name"]
+  do_components_techmd.each { |techmd| csv << techmd }
 end
