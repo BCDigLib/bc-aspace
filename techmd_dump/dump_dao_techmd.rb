@@ -38,7 +38,7 @@ do_component_uris.flatten.each do |uri|
   do_component_id = do_component["uri"].split('/').last
   do_id = do_component["digital_object"]["ref"].split('/').last
 
-  file_version = do_component["file_versions"].map { |file_version| file_version }[0]
+  file_version = do_component["file_versions"].select { |file_version| file_version["use_statement"] = "archive image" }[0]
   file_uri = file_version["file_uri"]
   file_size_bytes = file_version["file_size_bytes"]
   checksum = file_version["checksum"]
