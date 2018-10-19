@@ -7,8 +7,9 @@
 # Also imports technical metadata from an exif file and stores it on the pertinent Digital Object Components.
 # METS exports for every created Digital Object are also saved off in a folder labeled "METS".
 
-# USAGE: |aspace_batch_dao.py tab_file.txt exif_file.csv| where tab_file.txt is the output of aspace_ead_to_tab.xsl
-# and exif_file.csv is provided by the Digital Preservation Librarian and meets the specifications listed in the readme.
+# USAGE: |aspace_batch_dao.py tab_file.txt fits_file.txt| where tab_file.txt is the output of aspace_ead_to_tab.xsl
+# and fits_file.txt is the output of fits_to_tsv.xsl when run over the FITS xml file provided by the Digital
+# Preservation Librarian.
 
 import requests
 import json
@@ -24,7 +25,7 @@ def main():
     password = 'xxxxxx'
     # the following group are based on assumptions and may need to be changed project-to-project.
     format_note = "reformatted digital"
-    file_type = "image/tiff"
+    file_type = "audio/wav"
     # open the exif file and read its contents into a dictionary that can be accessed to add techMD to digital
     # object components as they are built. If the dictionary fails to build, end process with an error indicating
     # the exif file is invalid.
@@ -34,20 +35,15 @@ def main():
     tech_data = tech_in.read()
     tech_lines = tech_data.splitlines()
     for line in tech_lines:
-        fields = line.split(',')
-        if "SourceFile" not in fields[0]:
+        fields = line.split('\t')
+        if "format" not in fields[0]:
             if fields[1] not in tech_struct:
-                if fields[3].isdigit() and fields[6].isdigit():
-                    try:
-                        tech_struct[fields[1]] = [fields[2], fields[3], fields[4], fields[5], fields[6], fields[7],
-                                                  fields[8]]
-                    except IndexError:
-                        print("Exif file missing one or more values for " + fields[1] + ". Please check exif file and"
-                                                                                        " try again.")
-                        sys.exit()
-                else:
-                    print("Either the file size or resolution for " + fields[1] + " is not an integer. Please check"
-                                                                                  " exif file and try again.")
+                try:
+                    tech_struct[fields[1]] = [fields[0], fields[2], fields[3], fields[4], fields[5], fields[6]]
+                except IndexError:
+                    print("Exif file missing one or more values for " + fields[1] + ". Please check exif file and"
+                                " try again.")
+                    sys.exit()
     # use the tab file created with aspace_ead_to_tab.xsl to gather variables and make the API calls
     # tab_file = 'output.txt'
     tab_file = sys.argv[1]
@@ -136,11 +132,15 @@ def main():
                 contents = infile.read()
                 file_names = contents.splitlines()
                 for name in file_names:
+                    lab_val = "Master"
+                    if "INT" in name:
+                        lab_val = "Intermediate"
                     period_loc = name.index('.')
                     base_name = name[0:period_loc]
-                    dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'file_versions':
-                        build_comp_file_version(name, tech_struct), 'title': base_name, 'display_string': name,
-                        'notes': build_comp_exif_notes(name, tech_struct), 'digital_object': {'ref': dig_obj_uri}}
+                    dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': lab_val,
+                               'file_versions':build_comp_file_version(name, tech_struct), 'title': base_name,
+                               'display_string': name, 'notes': build_comp_exif_notes(name, tech_struct),
+                               'digital_object': {'ref': dig_obj_uri}}
                     dig_obj_data = json.dumps(dig_obj)
                     print(dig_obj_data)
                     # Post the digital object component
@@ -286,23 +286,41 @@ def get_genre_type(dc_genre_term):
 
 
 # builds a [file version] segment for the Digital object component json that contains appropriate tech metadata from the
-# exif file. HARD CODED ASSUMPTIONS: Checksum type = MD5; use statement = archival image
+# FITS file. HARD CODED ASSUMPTIONS: Checksum type = MD5
 def build_comp_file_version(filename, techmd_dict):
-    check_value = techmd_dict[filename][0]
+    check_value = techmd_dict[filename][2]
     size = int(techmd_dict[filename][1])
-    format_type = str.lower(techmd_dict[filename][2])
-    blob = [{'file_uri': filename, 'use_statement': 'archive image', 'checksum_method': 'md5', 'file_size_bytes': size,
+    format_type = get_format_enum(techmd_dict[filename][0])
+    use_statement = "master"
+    if "INT" in filename:
+        use_statement = "intermediate_copy"
+    blob = [{'file_uri': filename, 'use_statement': use_statement, 'checksum_method': 'md5', 'file_size_bytes': size,
              'checksum': check_value, 'file_format_name': format_type, 'jsonmodel_type': 'file_version'}]
     return blob
 
 
-# builds the notes section for the digital object component where exif data that can't live on the file version is stored.
+# translation table/function to turn FITS-reported file formats into ASpace enums
+def get_format_enum(fits):
+    filetype= ""
+    if "tiff" in fits:
+        filetype = "tiff"
+    if "Waveform" in fits:
+        filetype = "wav"
+    if "RF64" in fits:
+        filetype = "rf64"
+    return filetype
+
+
+# builds the notes section for the digital object component where techMD that can't live on the file version is stored.
+# not all components have all metadata, so is not None tests are needed for every field.
 def build_comp_exif_notes(filename, techmd_dict):
     note_list = []
-    note_list.append(note_builder(techmd_dict[filename][3], 'pixel dimensions'))
-    note_list.append(note_builder(techmd_dict[filename][4], 'resolution'))
-    note_list.append(note_builder(techmd_dict[filename][5], 'bits per sample'))
-    note_list.append(note_builder(techmd_dict[filename][6], 'color space'))
+    if techmd_dict[filename][3] is not None:
+        note_list.append(note_builder(techmd_dict[filename][3], 'duration'))
+    if techmd_dict[filename][4] is not None:
+        note_list.append(note_builder(techmd_dict[filename][4], 'sample rate'))
+    if techmd_dict[filename][5] is not None:
+        note_list.append(note_builder(techmd_dict[filename][5], 'bit depth'))
     return note_list
 
 
