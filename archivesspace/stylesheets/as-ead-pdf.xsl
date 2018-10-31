@@ -589,6 +589,7 @@
                         <fo:page-number-citation ref-id="{local:buildID(ead:scopecontent[1])}"/>                    
                     </fo:block>                             
                 </xsl:if>
+                <!-- commented out to stop second extend from appearing as description note
                 <xsl:if test="ead:did/ead:physdesc[2]">
                     <fo:block text-align-last="justify"> 
                         <fo:basic-link internal-destination="{local:buildID(ead:did/ead:physdesc[2])}"><xsl:value-of select="local:tagName(ead:did/ead:physdesc[2])"/></fo:basic-link>                    
@@ -597,7 +598,7 @@
                         <xsl:text>&#160;&#160;</xsl:text>                    
                         <fo:page-number-citation ref-id="{local:buildID(ead:did/ead:physdesc[2])}"/>                    
                     </fo:block>                             
-                </xsl:if>
+                </xsl:if> -->
                 <xsl:if test="ead:arrangement">
                     <fo:block text-align-last="justify"> 
                         <fo:basic-link internal-destination="{local:buildID(ead:arrangement[1])}"><xsl:value-of select="local:tagName(ead:arrangement[1])"/></fo:basic-link>                    
@@ -890,9 +891,9 @@
     </xsl:template>
    
         
-    <!-- Formats children of arcdesc not in administrative or related materials sections-->
+    <!-- Formats children of arcdesc not in administrative or related materials sections - removed 'ead:did/ead:physdesc[2]-->
     <xsl:template match="ead:bibliography | ead:odd | ead:phystech | ead:otherfindaid | 
-        ead:bioghist | ead:scopecontent | ead:did/ead:physdesc[2] | ead:fileplan">
+        ead:bioghist | ead:scopecontent | ead:fileplan">
         <fo:block xsl:use-attribute-sets="section">  
             <fo:block xsl:use-attribute-sets="h2ID"><xsl:value-of select="local:tagName(.)"/></fo:block> 
                 <xsl:apply-templates/>                
