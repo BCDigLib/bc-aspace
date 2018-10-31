@@ -798,7 +798,7 @@
                         <xsl:apply-templates select="ead:unittitle" mode="overview"/>    
                         <xsl:apply-templates select="ead:unitid" mode="overview"/>
                         <xsl:apply-templates select="ead:unitdate" mode="overview"/>
-                        <xsl:apply-templates select="ead:physdesc[@altrender='whole']" mode="overview"/>  
+                        <xsl:apply-templates select="ead:physdesc" mode="overview"/>  
                         <xsl:apply-templates select="ead:physloc" mode="overview"/> 
                         <xsl:apply-templates select="ead:dao" mode="overview"/>
                         <xsl:apply-templates select="ead:daogrp" mode="overview"/>
@@ -824,7 +824,7 @@
     </xsl:template>
     
     <!-- Formats extent as a subset of physdesc -->
-    <xsl:template match="ead:physdesc[@altrender='whole']" mode="overview">
+    <xsl:template match="ead:physdesc" mode="overview">
         <fo:table-row>
             <fo:table-cell padding-bottom="8pt" padding-right="16pt" text-align="right" font-weight="bold">
                 <fo:block>
