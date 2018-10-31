@@ -7,7 +7,7 @@
         *                                                                 *
         * VERSION:          1.0                                           *
         *                                                                 *
-        * AUTHOR:           Winona Salesky                                *dao
+        * AUTHOR:           Winona Salesky                                *
         *                   wsalesky@gmail.com                            *
         *                                                                 *
         * DATE:             2013-08-21                                    *
@@ -1349,10 +1349,11 @@
             </xsl:choose>        
         </fo:basic-link>
     </xsl:template>
+    
     <xsl:template match="ead:dao">
         <xsl:variable name="linkTitle">
             <xsl:choose>
-              <!--  <xsl:when test="child::*">
+                <!--  <xsl:when test="child::*">
                     <xsl:apply-templates/>
                 </xsl:when> -->
                 <xsl:when test="@xlink:href">
@@ -1364,10 +1365,11 @@
             <xsl:value-of select="$linkTitle"/>
         </fo:basic-link>
     </xsl:template>
-    <xsl:template match="ead:daogrp">
-        <fo:block>
-            <xsl:apply-templates/>
-        </fo:block>
+
+        <xsl:template match="ead:daogrp">
+            <fo:block>
+                <xsl:apply-templates/>
+            </fo:block>
     </xsl:template>
     <xsl:template match="ead:daoloc">
         <fo:basic-link external-destination="url('{@*:href}')" xsl:use-attribute-sets="ref">
@@ -1651,7 +1653,12 @@
     <!-- Formats did containers -->
     <xsl:template match="ead:container">
         <fo:table-cell>
-            <fo:block margin="4pt 0"><xsl:value-of select="@type"/><xsl:text> </xsl:text><xsl:value-of select="."/></fo:block>
+            <xsl:choose>
+                <xsl:when test="@type='Digital_content'"><fo:block margin="4pt 0"><xsl:text>Digital content </xsl:text><xsl:value-of select="."/></fo:block></xsl:when>
+                <xsl:otherwise>
+                    <fo:block margin="4pt 0"><xsl:value-of select="@type"/><xsl:text> </xsl:text><xsl:value-of select="."/></fo:block>
+                </xsl:otherwise>
+            </xsl:choose>
         </fo:table-cell>
     </xsl:template>
     
@@ -1688,8 +1695,8 @@
             <xsl:apply-templates select="ead:origination" mode="dsc"/>            
            <!-- <xsl:apply-templates select="ead:unitdate" mode="dsc"/>  -->        
             <xsl:apply-templates select="ead:physdesc" mode="dsc"/>                    
-            <xsl:apply-templates select="ead:physloc" mode="dsc"/>             
-            <xsl:apply-templates select="ead:dao"/>            
+            <xsl:apply-templates select="ead:physloc" mode="dsc"/>    
+            <xsl:apply-templates select="ead:dao"/>           
             <xsl:apply-templates select="ead:daogrp"/>            
             <xsl:apply-templates select="ead:langmaterial" mode="dsc"/>            
             <xsl:apply-templates select="ead:materialspec" mode="dsc"/>            
@@ -1734,7 +1741,7 @@
                 <xsl:value-of select="ead:unitdate"/> 
             </xsl:if>
             <xsl:apply-templates select="ead:physdesc" mode="dsc"/>                    
-            <xsl:apply-templates select="ead:physloc" mode="dsc"/>             
+            <xsl:apply-templates select="ead:physloc" mode="dsc"/>    
             <xsl:apply-templates select="ead:dao" mode="dsc"/>            
             <xsl:apply-templates select="ead:daogrp" mode="dsc"/>            
             <xsl:apply-templates select="ead:langmaterial" mode="dsc"/>            
@@ -1831,6 +1838,9 @@
        
     </xsl:template> -->
     <xsl:template match="ead:dao" mode="dsc">
+        <xsl:choose>
+            <!-- Stop DAO links coming out for items with Digital_content top containers -->
+            <xsl:when test="not(preceding-sibling::ead:container[@type='Digital_content'])">
         <xsl:variable name="title">
             <xsl:choose>
                 <xsl:when test="child::*">
@@ -1856,7 +1866,9 @@
                 <xsl:value-of select="@*:href"/>
             </fo:basic-link>
         </fo:block>
-    </xsl:template>
+        </xsl:when>
+        </xsl:choose>
+    </xsl:template> 
     <!-- Everything else in the dsc -->
     <xsl:template mode="dsc" match="*">
         <xsl:if test="child::*">
