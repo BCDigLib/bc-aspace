@@ -1519,7 +1519,7 @@
             <xsl:choose>
                 <!--Formats Series and Groups  -->
                 <xsl:when test="@level='subcollection' or @level='subgrp' or @level='series' 
-                    or @level='subseries' or @level='collection'or @level='fonds' or 
+                    or @level='subseries' or @level='collection'or @level='fonds' or @otherlevel='Sub-subseries' or
                     @level='recordgrp' or @level='subfonds' or @level='class' or (@level='otherlevel' and not(child::ead:did/ead:container))">
                     <fo:table-row background-color="#f0f0f0" border-bottom="1px dotted #ccc" border-top="3pt solid #ccc" keep-with-next.within-page="always">
                         <fo:table-cell margin-left="{$clevelMargin}" padding-top="4pt">
