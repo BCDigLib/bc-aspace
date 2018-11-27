@@ -22,6 +22,14 @@
         <xsl:text>sampleRate</xsl:text>
         <xsl:value-of select="$varTab"/>
         <xsl:text>bitDepth</xsl:text>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text>pixelDimensions</xsl:text>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text>resolution</xsl:text>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text>bitsPerSample</xsl:text>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text>colorSpace</xsl:text>
         <xsl:text>&#xa;</xsl:text>
 
         <xsl:for-each select="fits:fits">
@@ -34,6 +42,9 @@
                 </xsl:when>
                 <xsl:when test="fits:identification/fits:identity/@format = 'Portable Document Format'">
                     <xsl:call-template name="PDF"/>
+                </xsl:when>
+                <xsl:when test="fits:identification/fits:identity/@format = 'TIFF EXIF'">
+                    <xsl:call-template name="TIFF"/>
                 </xsl:when>
             </xsl:choose>
         </xsl:for-each>
@@ -74,6 +85,32 @@
         <xsl:text/>
         <xsl:value-of select="$varTab"/>
         <xsl:text/>
+        <xsl:text>&#xa;</xsl:text>
+    </xsl:template>
+    
+    <!-- Template for TIFF files-->
+    <xsl:template name="TIFF">
+        <xsl:value-of select="fits:identification/fits:identity[1]/@format"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:fileinfo/fits:filename"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:fileinfo/fits:size"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:fileinfo/fits:md5checksum"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:text/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:metadata/fits:image/fits:imageWidth"/><xsl:text>x</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:imageHeight"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:metadata/fits:image/fits:xSamplingFrequency"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits/metadata/fits:image/fits:bitsPerSample/@toolname='Exiftool'"/>
+        <xsl:value-of select="$varTab"/>
+        <xsl:value-of select="fits:metadata/fits:image/fits:colorSpace"/>
         <xsl:text>&#xa;</xsl:text>
     </xsl:template>
 </xsl:stylesheet>
