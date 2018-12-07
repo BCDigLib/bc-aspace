@@ -20,6 +20,7 @@ en:
       case-drawer: Case Drawer
       barcode: Barcode
       volume: Volume
+      Digital_content: Digital content
     event_event_type:
       published_materials_transfer: Published Materials Transfer
     file_version_checksum_methods:
