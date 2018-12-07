@@ -23,6 +23,9 @@ en:
       Digital_content: Digital content
     event_event_type:
       published_materials_transfer: Published Materials Transfer
+    event_outcome:
+      partial pass: Warning
+      pass: Success
     file_version_checksum_methods:
       md5-audio-data-only: MD5 audio-data-only
     file_version_use_statement:
