@@ -4,10 +4,10 @@ en:
     string_2: BC Archives Record Group
     string_3: IMC Print Indicator (Y/N)
   brand:
-    title: BC ArchivesSpace | Staff Interface
+    title: BC Libraries ArchivesSpace | Staff Interface
     home: Staff Home
-    welcome_message: Welcome to Boston College ArchivesSpace | Staff Interface
+    welcome_message: Welcome to BC Libraries ArchivesSpace | Staff Interface
   welcome:
-    heading: Welcome to Boston College ArchivesSpace
-    message: For use by Burns Library staff.
+    heading: Welcome to BC Libraries ArchivesSpace
+    message: For use by authorized staff.
     message_logged_in: You are now logged in to the staff interface.
