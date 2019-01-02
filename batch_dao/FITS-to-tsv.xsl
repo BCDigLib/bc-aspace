@@ -108,7 +108,7 @@
         <xsl:value-of select="$varTab"/>
         <xsl:value-of select="fits:metadata/fits:image/fits:xSamplingFrequency"/>
         <xsl:value-of select="$varTab"/>
-        <xsl:value-of select="fits/metadata/fits:image/fits:bitsPerSample/@toolname='Exiftool'"/>
+        <xsl:value-of select="fits:metadata/fits:image/fits:bitsPerSample/@toolname='Exiftool'"/>
         <xsl:value-of select="$varTab"/>
         <xsl:value-of select="fits:metadata/fits:image/fits:colorSpace"/>
         <xsl:text>&#xa;</xsl:text>
