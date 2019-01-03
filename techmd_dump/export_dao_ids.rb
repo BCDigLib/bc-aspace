@@ -22,6 +22,7 @@ resource_tree_suffix = '/repositories/2/resources/' + resource_id + '/tree'
 
 resource_tree = get_record(resource_tree_suffix)
 archival_object_refs = []
+digital_object_refs = []
 
 resource_tree["children"].map do |child|
   if child["has_children"] == true
@@ -51,3 +52,7 @@ resource_tree["children"].map do |child|
   end
 end
 
+archival_object_refs.map do |ref|
+  archival_object = get_record(ref)
+  archival_object["instances"].map { |instance| digital_object_refs << instance["digital_object"]["ref"] if instance["instance_type"] == "digital_object" }
+end
