@@ -17,10 +17,16 @@ def get_record(uri_suffix)
   JSON.parse(response)
 end
 
-resource_id = ARGV[0]
-resource_tree_suffix = '/repositories/2/resources/' + resource_id + '/tree'
-resource_tree = get_record(resource_tree_suffix)
-resource_title = resource_tree["title"].gsub(/ /, '_')
+begin
+  resource_id = ARGV[0]
+  resource_tree_suffix = '/repositories/2/resources/' + resource_id + '/tree'
+  resource_tree = get_record(resource_tree_suffix)
+  resource_title = resource_tree["title"].gsub(/ /, '_')
+rescue
+  puts "Requires a resource ID (database primary key)."
+  puts "Sample usage: ruby export_dao_ids.rb 250"
+  puts ""
+end
 
 archival_object_refs = []
 digital_object_refs = []
@@ -57,11 +63,14 @@ archival_object_refs.map do |ref|
   archival_object = get_record(ref)
   archival_object["instances"].map { |instance| digital_object_refs << instance["digital_object"]["ref"] if instance["instance_type"] == "digital_object" }
 end
+
 digital_object_ids = digital_object_refs.map { |ref| ref.split('/').last }
 
 output = File.new("#{resource_title}.txt", "w")
+
 digital_object_ids.each do |id|
   output.write(id)
   output.write("\n")
 end
+
 output.close
