@@ -20,4 +20,34 @@ end
 resource_id = ARGV[0]
 resource_tree_suffix = '/repositories/2/resources/' + resource_id + '/tree'
 
-tree = get_record(resource_tree_suffix)
+resource_tree = get_record(resource_tree_suffix)
+archival_object_refs = []
+
+resource_tree["children"].map do |child|
+  if child["has_children"] == true
+    child["children"].map do |child|
+      archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
+      if child["has_children"] == true
+        child["children"].map do |child|
+          archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
+          if child["has_children"] == true
+            child["children"].map do |child|
+              archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
+              if child["has_children"] == true
+                child["children"].map do |child|
+                  archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
+                  if child["has_children"] == true
+                    child["children"].map do |child|
+                      archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
