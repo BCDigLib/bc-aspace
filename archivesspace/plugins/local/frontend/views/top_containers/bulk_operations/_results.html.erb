@@ -65,7 +65,7 @@
             </ul>
           <% end %>
         </td>
-        <td class="top-container-profile"><%= Array(doc['container_profile_display_string_u_sstr']).first %></td>
+        <td class="top-container-profile"><%= container_json['container_profile']['resolved']['name'] unless container_json.dig('container_profile', 'resolved', 'name').nil? %></td>
         <td class="top-container-indicator">
           <!-- Check if the accession was migrated. -->
           <% if container_json.dig("container_locations", 0, "note").nil? || container_json.dig("collection", 0, "ref").nil? %>
