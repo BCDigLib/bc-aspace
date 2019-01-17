@@ -172,7 +172,10 @@ def create_date_json(jsontext, itemid, collection_dates):
             print(
                 "Item " + itemid + " has a single-type date with no start value. Please check the metadata & try again")
             sys.exit()
-        expression = start_date
+        try:
+            expression = jsontext['dates'][0]['expression']
+        except KeyError:
+            expression = start_date
         date_json = [{'begin':start_date, 'date_type':'single', 'expression':expression, 'label':'creation', 'jsonmodel_type':'date'}]
         return date_json
     elif "single" not in jsontext['dates'][0]['date_type']:
@@ -200,10 +203,13 @@ def create_date_json(jsontext, itemid, collection_dates):
         except KeyError:
             print("Item " + itemid + " has no end date. Please check the metadata & try again")
             sys.exit()
-        if end_date in start_date:
-            expression = start_date
-        else:
-            expression = start_date + "-" + end_date
+        try:
+            expression = jsontext['dates'][0]['expression']
+        except KeyError:
+            if end_date in start_date:
+                expression = start_date
+            else:
+                expression = start_date + "-" + end_date
         date_json = [{'begin':start_date, 'end':end_date, 'date_type':date_type, 'expression':expression, 'label':'creation', 'jsonmodel_type':'date'}]
         return date_json
 
