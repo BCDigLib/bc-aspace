@@ -56,6 +56,8 @@ resource_tree["children"].map do |child|
         end
       end
     end
+  elsif child["instance_types"].include?("digital_object")
+    archival_object_refs << child["record_uri"] if child["instance_types"].include?("digital_object")
   end
 end
 
