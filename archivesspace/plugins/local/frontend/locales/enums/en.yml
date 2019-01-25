@@ -38,6 +38,10 @@ en:
     event_outcome:
       partial pass: Warning
       pass: Success
+    file_version_use_statement:
+      access_copy: access copy
+      intermediate_copy: intermediate copy
+      master: master
     file_version_checksum_methods:
       md5-audio-data-only: MD5 audio-data-only
     subject_source:
