@@ -40,9 +40,6 @@ en:
       pass: Success
     file_version_checksum_methods:
       md5-audio-data-only: MD5 audio-data-only
-    file_version_use_statement:
-      archive image: archive image
-      reference image: reference image
     subject_source:
       record_group: Record Group
       tgm: TGM, Thesaurus for Graphic Materials
