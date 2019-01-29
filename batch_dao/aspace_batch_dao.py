@@ -135,6 +135,8 @@ def main():
                     lab_val = "Master"
                     if "INT" in name:
                         lab_val = "Intermediate"
+                    elif "ACC" in name:
+                        lab_val = "Access"
                     period_loc = name.index('.')
                     base_name = name[0:period_loc]
                     dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': lab_val,
@@ -303,6 +305,8 @@ def build_comp_file_version(filename, techmd_dict):
     use_statement = "master"
     if "INT" in filename:
         use_statement = "intermediate_copy"
+    elif "ACC" in filename:
+        use_statement = "access_copy"
     blob = [{'file_uri': filename, 'use_statement': use_statement, 'file_size_bytes': size, 'checksum_method': 'md5',
              'checksum': check_value, 'file_format_name': format_type, 'jsonmodel_type': 'file_version'}]
 
