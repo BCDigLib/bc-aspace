@@ -7,11 +7,10 @@ Steps:
 
 2. Once all objects selected for digitization within a given collection have been marked with CUIs, export the EAD for the entire collection with only the "include <dao> tags" option checked.
 
-3. Transform the collection EAD into a tab-delimited file using aspace_ead_to_tab.xsl. Send a copy of this file to the scanner, so that the CUIs can be used to generate filenames in the scanning process.
+3. Transform the collection EAD into a tab-delimited file using aspace_ead_to_tab.xsl. Send a copy of this file to the digitizer, so that the CUIs can be used to generate filenames in the digitization process.
 
-4. When the scanning is complete, each object should be represented by a folder named with the CUI and containing image files titled with the CUI and an order number (_0000, _0001, etc.) appended. Run dir_list.py over each folder to create .txt files containing lists of the image file names for each object. Make sure that these files are in the same directory as aspace_batch_dao.py and the tab file output by aspace_ead_to_tab.xsl.
+4. When the digitization is complete, the Digital Preservation Librarian runs FITS over the resulting files. Run the fits-to-json XSL over the FITS file, to create a .json file of technical metadata.
 
-5. Run aspace_batch_dao.py from the command line with the following usage: "aspace_batch_dao.py tab_file.txt exif-file.csv" where tab_file.txt is the output of aspace_ead_to_tab.xsl, and exif-file.csv is a csv file provided by the Digital Preservation Librarian containing checksums and other technical metadata for the image files. This will call on the ArchivesSpace API to create a Digital Object and Digital Object Components for each object and the image files that represent it. If there are errors, the object metadata in ArchivesSpace or various aspects of the python script may need editing.
+5. Run aspace_batch_dao.py from the command line with the following usage: "aspace_batch_dao.py tab_file.txt fits-file.json" where tab_file.txt is the output of aspace_ead_to_tab.xsl, and fits-file.json is the output of step 4. This will call on the ArchivesSpace API to create a Digital Object and Digital Object Components for each object and the image files that represent it. If there are errors, the object metadata in ArchivesSpace or various aspects of the python script may need editing.
 
-6. After running aspace_batch_dao.py, there will now be a subdirectory titled "METS" containing the exported METS files for each newly created Digital Objects. Transform these into DigiTool-compliant METS using ASMETS_to_diglibMETS-Template.xsl. The output METS/XML files can then be used to ingest the image files into DigiTool as described at https://bcwiki.bc.edu/display/UL/DigiTool+Ingest+Workflow.
-
+6. After running aspace_batch_dao.py, there will now be a file titled "ids_for_manifest.txt'. This file can be used as input for the aspace-iiif gem to generate manifests for Mirador ingest.
