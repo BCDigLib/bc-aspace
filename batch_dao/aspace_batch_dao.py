@@ -24,26 +24,19 @@ def main():
     password = 'xxxxxx'
     # the following group are based on assumptions and may need to be changed project-to-project.
     format_note = "reformatted digital"
-    file_type = "image/tiff"
-    # open the exif file and read its contents into a dictionary that can be accessed to add techMD to digital
-    # object components as they are built. If the dictionary fails to build, end process with an error indicating
-    # the exif file is invalid.
-    tech_struct = dict()
+    # open the fits file and read in its contents. This dictionary is used for techMD calls, also create another dict
+    # for file lists.
+    files_listing = dict()
     techmd_file = sys.argv[2]
     tech_in = open(techmd_file, 'r')
-    tech_data = tech_in.read()
-    tech_lines = tech_data.splitlines()
-    for line in tech_lines:
-        fields = line.split('\t')
-        if "format" not in fields[0]:
-            if fields[1] not in tech_struct:
-                try:
-                    tech_struct[fields[1]] = [fields[0], fields[2], fields[3], fields[4], fields[5], fields[6],
-                                              fields[7], fields[8], fields[9], fields[10]]
-                except IndexError:
-                    print("Exif file missing one or more values for " + fields[1] + ". Please check exif file and"
-                                " try again.")
-                    sys.exit()
+    tech_data = json.load(tech_in)
+    for key in tech_data.items():
+        cutoff = key.replace('_', "|", 2).find('_')
+        short_name = key[0:cutoff]
+        if short_name not in files_listing:
+            files_listing[short_name] = [key]
+        elif short_name in files_listing:
+            files_listing[short_name].append(key)
     # use the tab file created with aspace_ead_to_tab.xsl to gather variables and make the API calls
     # tab_file = 'output.txt'
     tab_file = sys.argv[1]
@@ -94,11 +87,11 @@ def main():
         date_json = create_date_json(archival_object_json, unique_id, collection_dates)
         # make the JSON
         dig_obj = {'jsonmodel_type':'digital_object','title':obj_title, 'digital_object_type':
-                get_resource_type(type_of_resouce, id_ref), 'language': lang_code,
+                get_resource_type(archival_object_json, id_ref), 'language': lang_code,
                 'digital_object_id': 'http://hdl.handle.net/2345.2/' + unique_id, 'publish': True, 'notes':[{'content':
                 [use_note], 'type':'userestrict', 'jsonmodel_type':'note_digital_object'},{'content':[dimensions_note],
                 'type':'dimensions', 'jsonmodel_type':'note_digital_object'}, {'content':[format_note], 'type':'note','jsonmodel_type':'note_digital_object'},
-                {'content':[file_type], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
+                {'content':[get_file_type(files_listing[unique_id])], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
                 'linked_agents':agent_data, 'subjects': get_genre_type(genre)}
         # format the JSON
         dig_obj_data = json.dumps(dig_obj)
@@ -123,33 +116,30 @@ def main():
         # Repost the archival object
         archival_object_update = requests.post(aspace_url + archival_object_uri, headers=headers, data=archival_object_data).json()
         print(archival_object_update)
-        # find and open the component file to get the data to create digital object components. assumes files in the same
-        # directory that include the ref_id in the filename and contain a list of all image files associated with the object
-        files_list = os.listdir('.')
-        for components_file in files_list:
-            if unique_id in components_file:
-                infile = open(components_file, 'r')
-                contents = infile.read()
-                file_names = contents.splitlines()
-                for name in file_names:
-                    lab_val = "Master"
-                    if "INT" in name:
-                        lab_val = "Intermediate"
-                    period_loc = name.index('.')
-                    base_name = name[0:period_loc]
-                    dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': lab_val,
-                               'file_versions':build_comp_file_version(name, tech_struct), 'title': base_name,
-                               'display_string': name, 'notes': build_comp_exif_notes(name, tech_struct),
-                               'digital_object': {'ref': dig_obj_uri}}
-                    dig_obj_data = json.dumps(dig_obj)
-                    print(dig_obj_data)
-                    # Post the digital object component
-                    dig_obj_post = requests.post(aspace_url + '/repositories/2/digital_object_components', headers=headers,
+        # pull in files list from dictionary to get data to create digital object components.
+        file_names = files_listing[unique_id]
+        file_names.sort()
+        for name in file_names:
+            lab_val = "Master"
+            if "INT" in name:
+                lab_val = "Intermediate"
+            elif "ACC" in name:
+                lab_val = "Access"
+            period_loc = name.index('.')
+            base_name = name[0:period_loc]
+            dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': lab_val,
+                        'file_versions':build_comp_file_version(name, tech_data), 'title': base_name,
+                        'display_string': name, 'notes': build_comp_exif_notes(name, tech_data),
+                        'digital_object': {'ref': dig_obj_uri}}
+            dig_obj_data = json.dumps(dig_obj)
+            print(dig_obj_data)
+            # Post the digital object component
+            dig_obj_post = requests.post(aspace_url + '/repositories/2/digital_object_components', headers=headers,
                                              data=dig_obj_data).json()
-                    print(dig_obj_post)
-                    if "invalid_object" in dig_obj_post:
-                        print("Whoops, you tried to post an invalid object! Check your error logs and try again")
-                        sys.exit()
+            print(dig_obj_post)
+            if "invalid_object" in dig_obj_post:
+                print("Whoops, you tried to post an invalid object! Check your error logs and try again")
+                sys.exit()
         # create the mets call URI by modifying the digital object uri
         id_start = dig_obj_uri.rfind('/')
         mets_uri = dig_obj_uri[0:id_start] + '/mets' + dig_obj_uri[id_start:len(dig_obj_uri)] + '.xml'
@@ -172,7 +162,10 @@ def create_date_json(jsontext, itemid, collection_dates):
             print(
                 "Item " + itemid + " has a single-type date with no start value. Please check the metadata & try again")
             sys.exit()
-        expression = start_date
+        try:
+            expression = jsontext['dates'][0]['expression']
+        except KeyError:
+            expression = start_date
         date_json = [{'begin':start_date, 'date_type':'single', 'expression':expression, 'label':'creation', 'jsonmodel_type':'date'}]
         return date_json
     elif "single" not in jsontext['dates'][0]['date_type']:
@@ -200,41 +193,44 @@ def create_date_json(jsontext, itemid, collection_dates):
         except KeyError:
             print("Item " + itemid + " has no end date. Please check the metadata & try again")
             sys.exit()
-        if end_date in start_date:
-            expression = start_date
-        else:
-            expression = start_date + "-" + end_date
+        try:
+            expression = jsontext['dates'][0]['expression']
+        except KeyError:
+            if end_date in start_date:
+                expression = start_date
+            else:
+                expression = start_date + "-" + end_date
         date_json = [{'begin':start_date, 'end':end_date, 'date_type':date_type, 'expression':expression, 'label':'creation', 'jsonmodel_type':'date'}]
         return date_json
 
 
-# Sets an Aspace instance type for the DAO based on the typeOfResource assigned in the EAD-to-tab XSL
-def get_resource_type(instance_type, item_id):
-    print(instance_type)
-    if instance_type == "text":
+# Sets an Aspace instance type for the DAO based on the physical instance of the AO
+def get_resource_type(ao_json, item_id):
+    instance_type = ""
+    for instance in ao_json['instances']:
+        if 'digital' in instance['instance_type']:
+            pass
+        else:
+            instance_type = instance['instance_type']
+            break
+    if instance_type == "text" or instance_type == "books":
         return "text"
-    elif instance_type == "cartographic":
+    elif instance_type == "maps":
         return "cartographic"
     elif instance_type == "notated music":
         return "notated_music"
-    elif instance_type == "sound recording":
+    elif instance_type == "audio":
         return "sound_recording"
-    elif instance_type == "sound recording-musical":
-        return "sound_recording_musical"
-    elif instance_type == "sound recording-nonmusical":
-        return "sound_recording_nonmusical"
-    elif instance_type == "still image":
+    elif instance_type == "graphic_materials" or instance_type == "photo":
         return "still_image"
-    elif instance_type == "moving image":
+    elif instance_type == "moving_images":
         return "moving_image"
-    elif instance_type == "three dimensional object":
+    elif instance_type == "realia":
         return "three dimensional object"
-    elif instance_type == "software, multimedia":
-        return "software_multimedia"
-    elif instance_type == "mixed material":
-        return "moving_image"
+    elif instance_type == "mixed_materials":
+        return "mixed_materials"
     else:
-        print(item_id + " has an improperly formatted Digital Commonwealth typeOfResource. Please check the metadata & try again.")
+        print(item_id + " can't be assigned a typeOfResource based on the physical istance. Please check the metadata & try again.")
         sys.exit()
 
 
@@ -291,12 +287,14 @@ def get_genre_type(dc_genre_term):
 # builds a [file version] segment for the Digital object component json that contains appropriate tech metadata from the
 # FITS file. HARD CODED ASSUMPTIONS: Checksum type = MD5
 def build_comp_file_version(filename, techmd_dict):
-    check_value = techmd_dict[filename][2]
-    size = int(techmd_dict[filename][1])
-    format_type = get_format_enum(techmd_dict[filename][0])
+    check_value = techmd_dict[filename]['checksum']
+    size = int(techmd_dict[filename]['filesize'])
+    format_type = get_format_enum(techmd_dict[filename]['format'])
     use_statement = "master"
     if "INT" in filename:
         use_statement = "intermediate_copy"
+    elif "ACC" in filename:
+        use_statement = "access_copy"
     blob = [{'file_uri': filename, 'use_statement': use_statement, 'file_size_bytes': size, 'checksum_method': 'md5',
              'checksum': check_value, 'file_format_name': format_type, 'jsonmodel_type': 'file_version'}]
 
@@ -312,27 +310,105 @@ def get_format_enum(fits):
         filetype = "wav"
     if "RF64" in fits:
         filetype = "rf64"
+    if "Quicktime" in fits:
+        filetype = "mov"
+    if "Microsoft Word Binary File Format" in fits:
+        filetype = "doc"
+    if "Office Open XML Document" in fits:
+        filetype = "docx"
     return filetype
 
 
 # builds the notes section for the digital object component where techMD that can't live on the file version is stored.
-# not all components have all metadata, so is not None tests are needed for every field.
+# not all components have all metadata, try-catch blocks are needed to prevent key errors. Value > 0 tests are required
+# because Aspace won't consider JSON valid if it contains an 'empty' note field.
 def build_comp_exif_notes(filename, techmd_dict):
     note_list = []
-    if len(techmd_dict[filename][3]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][3], 'duration'))
-    if len(techmd_dict[filename][4]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][4], 'sample rate'))
-    if len(techmd_dict[filename][5]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][5], 'bit depth'))
-    if len(techmd_dict[filename][6]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][5], 'pixel dimensions'))
-    if len(techmd_dict[filename][7]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][5], 'resolution'))
-    if len(techmd_dict[filename][8]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][5], 'bits per sample'))
-    if len(techmd_dict[filename][9]) > 0:
-        note_list.append(note_builder(techmd_dict[filename][5], 'color space'))
+    try:
+        if techmd_dict[filename]['duration-Ms'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['duration-Ms'], 'duration Ms'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['duration-H:M:S'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['duration-H:M:S'], 'duration H:M:S'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['sampleRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['sampleRate'], 'sample rate'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['bitDepth'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['bitDepth'], 'bit depth'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['pixelDimensions'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['pixelDimensions'], 'pixel dimensions'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['resolution'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['resolution'], 'resolution'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['bitsPerSample'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['bitsPerSample'], 'bits per sample'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['colorSpace'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['colorSpace'], 'color space'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['createDate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['createDate'], 'create date'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['creatingApplicationName'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['creatingApplicationName'], 'creating application name'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['creatingApplicationVersion'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['creatingApplicationVersion'], 'creating application version'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['author'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['author'], 'author'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['title'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['title'], 'title'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['duration-Ms'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['duration-Ms'], 'duration-Ms'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['bitRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['bitRate'], 'bit rate'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['frameRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['frameRate'], 'frame rate'))
+    except KeyError:
+        pass
+    try:
+        if techmd_dict[filename]['chromaSubsampling'] > 0:
+            note_list.append(note_builder(techmd_dict[filename]['chromaSubsampling'], 'chroma subsampling'))
+    except KeyError:
+        pass
     return note_list
 
 
@@ -341,5 +417,25 @@ def note_builder(list_index, label_value):
                  'label':label_value}
     return note_text
 
+
+def get_file_type(filename):
+    period_loc = filename[0].rfind('.')
+    extension = filename[period_loc:len(filename)]
+    if 'tif' in extension:
+        value = 'image/tiff'
+    elif 'wav' in extension:
+        value = 'audio/und.wav'
+    elif 'pdf' in extension:
+        value = 'application/pdf'
+    elif extension == 'doc':
+        value = 'application/msword'
+    elif 'docx' in extension:
+        value = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    elif 'mov' in extension:
+        value = 'video/quicktime'
+    else:
+        print("File extension not recognized. Please reformat files or add extension to get_file_type function")
+        sys.exit()
+    return value
 
 main()
