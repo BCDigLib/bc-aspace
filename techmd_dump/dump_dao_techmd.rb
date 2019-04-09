@@ -16,7 +16,18 @@ auth_resp = RestClient::Request.execute(method: :post,
 auth_resp_serialized = JSON.parse(auth_resp)
 session_id = auth_resp_serialized["session"]
 
-input_ids = File.readlines(ARGV[0]).collect(&:strip)
+begin
+  input_ids = File.readlines(ARGV[0]).collect(&:strip)
+  test_endpoint = conf["aspace_base_uri"] + "/repositories/" + conf["aspace_repo_id"] + "/digital_objects/" + input_ids.first + "/tree"
+  test_response = RestClient.get(test_endpoint, {"X-ArchivesSpace-Session": session_id})
+  test_tree = JSON.parse(test_response)
+rescue
+  puts "Requires an input file of digital object IDs."
+  puts "Sample usage: ruby dump_dao_techmd.rb do_ids.txt"
+  puts ""
+  exit
+end
+
 do_component_uris = []
 
 input_ids.each do |id|
