@@ -88,8 +88,8 @@
         <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>",</xsl:text>
         <xsl:text>"bitDepth":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:bitDepth"/><xsl:text>",</xsl:text>
         <xsl:text>"colorSpace":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:colorspace"/><xsl:text>",</xsl:text>
-        <xsl:text>"duration-Ms":"</xsl:text><xsl:value-of select="fits:metadata/fits:audio/fits:duration"/><xsl:text>",</xsl:text>
-        <xsl:text>"bitRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:bitrate"/><xsl:text>",</xsl:text>
+        <xsl:text>"duration-Ms":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:duration"/><xsl:text>",</xsl:text>
+        <xsl:text>"bitRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:bitRate"/><xsl:text>",</xsl:text>
         <xsl:text>"frameRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:frameRate"/><xsl:text>",</xsl:text>
         <xsl:text>"chromaSubsampling":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:chromaSubsampling"/><xsl:text>"}]</xsl:text>
     </xsl:template>
