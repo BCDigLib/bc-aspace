@@ -21,6 +21,7 @@ en:
       barcode: Barcode
       volume: Volume
       Digital_content: Digital content
+      shared_box: Shared box
     digital_object_digital_object_type:
       cartographic: cartographic
       mixed_materials: mixed material
