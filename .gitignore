@@ -4,7 +4,7 @@
 # Exlude any uncaught system files
 Icon?
 Icon
-.DS_Stream
+.DS_Store
 
 # Exclude input/output files
 *.csv
