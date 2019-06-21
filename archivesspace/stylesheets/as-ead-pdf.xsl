@@ -330,42 +330,15 @@
     <!-- Builds title -->
     <xsl:template match="ead:titlestmt" mode="pageHeader">
         <!-- does not usefiling type title if present -->
-        <xsl:choose>
-            <xsl:when test="ead:titleproper[@type='filing']">
-                    <xsl:choose>
-                        <xsl:when
-                            test="count(ead:filedesc/ead:titlestmt/ead:titleproper) &gt; 1">
-                            <xsl:apply-templates
-                                select="ead:filedesc/ead:titlestmt/ead:titleproper[not(@type='filing')]"
-                            />
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:apply-templates
-                                select="/ead:ead/ead:archdesc/ead:did/ead:unittitle"
-                                mode="header"/>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                </xsl:when>
-        </xsl:choose>
+        <xsl:apply-templates select="ead:titleproper[not(@type='filing')]/text()"/>
+
     </xsl:template>
     <xsl:template match="ead:titlestmt" mode="coverPage">
         <!-- Calls template with links to archive icon -->
        <!-- <xsl:call-template name="icon"/> -->
         <fo:block border-bottom="1pt solid #666" margin-top="1in" id="cover-page">
             <fo:block xsl:use-attribute-sets="h1">
-                <xsl:choose>
-                      <xsl:when
-                                test="count(ead:filedesc/ead:titlestmt/ead:titleproper) &gt; 1">
-                                <xsl:apply-templates
-                                    select="ead:filedesc/ead:titlestmt/ead:titleproper[not(@type='filing')]"
-                                />
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:apply-templates
-                                    select="/ead:ead/ead:archdesc/ead:did/ead:unittitle"
-                                    mode="header"/>
-                            </xsl:otherwise>
-                </xsl:choose>
+                <xsl:apply-templates select="ead:titleproper[not(@type='filing')]/text()"/>
             </fo:block>
             <xsl:if test="ead:subtitle">
                 <fo:block font-size="16pt" font-weight="bold"><xsl:apply-templates select="ead:subtitle"/></fo:block>    
