@@ -21,16 +21,30 @@ en:
       barcode: Barcode
       volume: Volume
       Digital_content: Digital content
+      shared_box: Shared box
+    digital_object_digital_object_type:
+      cartographic: cartographic
+      mixed_materials: mixed material
+      moving_image: moving image
+      notated_music: notated music
+      software_multimedia: software, multimedia
+      sound_recording: sound recording
+      sound_recording_musical: sound recording-musical
+      sound_recording_nonmusical: sound recording-nonmusical
+      still_image: still image
+      text: text
+      three_dimensional_object: three dimensional object
     event_event_type:
       published_materials_transfer: Published Materials Transfer
     event_outcome:
       partial pass: Warning
       pass: Success
+    file_version_use_statement:
+      access_copy: access copy
+      intermediate_copy: intermediate copy
+      master: master
     file_version_checksum_methods:
       md5-audio-data-only: MD5 audio-data-only
-    file_version_use_statement:
-      archive image: archive image
-      reference image: reference image
     subject_source:
       record_group: Record Group
       tgm: TGM, Thesaurus for Graphic Materials

@@ -31,7 +31,7 @@ end
 do_component_uris = []
 
 input_ids.each do |id|
-  do_tree_endpoint = conf["aspace_base_uri"] + "/repositories/" + conf["aspace_repo_id"] + "/digital_objects/" + id + "/tree"
+  do_tree_endpoint = conf["aspace_base_uri"] + "/repositories/" + conf["aspace_repo_id"].to_s + "/digital_objects/" + id + "/tree"
   do_tree_response = RestClient.get(do_tree_endpoint, {"X-ArchivesSpace-Session": session_id})
   do_tree = JSON.parse(do_tree_response)
 
