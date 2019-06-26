@@ -7,7 +7,7 @@ Steps:
 
 2. Once all objects selected for digitization within a given collection have been marked with CUIs, export the EAD for the entire collection with only the "include <dao> tags" option checked.
 
-3. Transform the collection EAD into a tab-delimited file using aspace_ead_to_tab.xsl. Send a copy of this file to the digitizer, so that the CUIs can be used to generate filenames in the digitization process.
+3. Transform the collection EAD into two different tab delimited files, using aspace_ead_to_tab.xsl and scanners_tsv.xsl. The output from scanners_tsv.xsl should be sent to the digitization staff as a tracking worksheet for digitization, and the output from aspace_ead_to_tab.xsl will be used to run aspace_batch_dao.py once digitization is complete.
 
 4. When the digitization is complete, the Digital Preservation Librarian runs FITS over the resulting files. Run the fits-to-json XSL over the FITS file, to create a .json file of technical metadata.
 
