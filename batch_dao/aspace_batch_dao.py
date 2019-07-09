@@ -30,7 +30,7 @@ def main():
     techmd_file = sys.argv[2]
     tech_in = open(techmd_file, 'r')
     tech_data = json.load(tech_in)
-    for key in tech_data.items():
+    for key, items in tech_data.items():
         cutoff = key.replace('_', "|", 2).find('_')
         short_name = key[0:cutoff]
         if short_name not in files_listing:
@@ -55,7 +55,6 @@ def main():
         collection_dates = metadata[4].split("/")
         lang_code = metadata[5]
         genre = metadata[6]
-        type_of_resouce = metadata[7]
         # aspace login info
         auth = requests.post(aspace_url + '/users/' + username + '/login?password=' + password).json()
         session = auth['session']
@@ -91,7 +90,7 @@ def main():
                 'digital_object_id': 'http://hdl.handle.net/2345.2/' + unique_id, 'publish': True, 'notes':[{'content':
                 [use_note], 'type':'userestrict', 'jsonmodel_type':'note_digital_object'},{'content':[dimensions_note],
                 'type':'dimensions', 'jsonmodel_type':'note_digital_object'}, {'content':[format_note], 'type':'note','jsonmodel_type':'note_digital_object'},
-                {'content':[get_file_type(files_listing[unique_id])], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
+                {'content':[get_file_type(files_listing[unique_id][0])], 'type':'note', 'jsonmodel_type':'note_digital_object'}], 'dates':date_json,
                 'linked_agents':agent_data, 'subjects': get_genre_type(genre)}
         # format the JSON
         dig_obj_data = json.dumps(dig_obj)
@@ -287,9 +286,9 @@ def get_genre_type(dc_genre_term):
 # builds a [file version] segment for the Digital object component json that contains appropriate tech metadata from the
 # FITS file. HARD CODED ASSUMPTIONS: Checksum type = MD5
 def build_comp_file_version(filename, techmd_dict):
-    check_value = techmd_dict[filename]['checksum']
-    size = int(techmd_dict[filename]['filesize'])
-    format_type = get_format_enum(techmd_dict[filename]['format'])
+    check_value = techmd_dict[filename][0]['checksum']
+    size = int(techmd_dict[filename][0]['filesize'])
+    format_type = get_format_enum(techmd_dict[filename][0]['format'])
     use_statement = "master"
     if "INT" in filename:
         use_statement = "intermediate_copy"
@@ -325,88 +324,88 @@ def get_format_enum(fits):
 def build_comp_exif_notes(filename, techmd_dict):
     note_list = []
     try:
-        if techmd_dict[filename]['duration-Ms'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['duration-Ms'], 'duration Ms'))
+        if techmd_dict[filename][0]['duration-Ms'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['duration-Ms'], 'duration Ms'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['duration-H:M:S'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['duration-H:M:S'], 'duration H:M:S'))
+        if techmd_dict[filename][0]['duration-H:M:S'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['duration-H:M:S'], 'duration H:M:S'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['sampleRate'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['sampleRate'], 'sample rate'))
+        if techmd_dict[filename][0]['sampleRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['sampleRate'], 'sample rate'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['bitDepth'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['bitDepth'], 'bit depth'))
+        if techmd_dict[filename][0]['bitDepth'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['bitDepth'], 'bit depth'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['pixelDimensions'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['pixelDimensions'], 'pixel dimensions'))
+        if techmd_dict[filename][0]['pixelDimensions'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['pixelDimensions'], 'pixel dimensions'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['resolution'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['resolution'], 'resolution'))
+        if techmd_dict[filename][0]['resolution'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['resolution'], 'resolution'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['bitsPerSample'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['bitsPerSample'], 'bits per sample'))
+        if techmd_dict[filename][0]['bitsPerSample'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['bitsPerSample'], 'bits per sample'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['colorSpace'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['colorSpace'], 'color space'))
+        if techmd_dict[filename][0]['colorSpace'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['colorSpace'], 'color space'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['createDate'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['createDate'], 'create date'))
+        if techmd_dict[filename][0]['createDate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['createDate'], 'create date'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['creatingApplicationName'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['creatingApplicationName'], 'creating application name'))
+        if techmd_dict[filename][0]['creatingApplicationName'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['creatingApplicationName'], 'creating application name'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['creatingApplicationVersion'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['creatingApplicationVersion'], 'creating application version'))
+        if techmd_dict[filename][0]['creatingApplicationVersion'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['creatingApplicationVersion'], 'creating application version'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['author'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['author'], 'author'))
+        if techmd_dict[filename][0]['author'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['author'], 'author'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['title'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['title'], 'title'))
+        if techmd_dict[filename][0]['title'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['title'], 'title'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['duration-Ms'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['duration-Ms'], 'duration-Ms'))
+        if techmd_dict[filename][0]['duration-Ms'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['duration-Ms'], 'duration-Ms'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['bitRate'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['bitRate'], 'bit rate'))
+        if techmd_dict[filename][0]['bitRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['bitRate'], 'bit rate'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['frameRate'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['frameRate'], 'frame rate'))
+        if techmd_dict[filename][0]['frameRate'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['frameRate'], 'frame rate'))
     except KeyError:
         pass
     try:
-        if techmd_dict[filename]['chromaSubsampling'] > 0:
-            note_list.append(note_builder(techmd_dict[filename]['chromaSubsampling'], 'chroma subsampling'))
+        if techmd_dict[filename][0]['chromaSubsampling'] > 0:
+            note_list.append(note_builder(techmd_dict[filename][0]['chromaSubsampling'], 'chroma subsampling'))
     except KeyError:
         pass
     return note_list
@@ -419,7 +418,7 @@ def note_builder(list_index, label_value):
 
 
 def get_file_type(filename):
-    period_loc = filename[0].rfind('.')
+    period_loc = filename.rfind('.')
     extension = filename[period_loc:len(filename)]
     if 'tif' in extension:
         value = 'image/tiff'
@@ -434,7 +433,8 @@ def get_file_type(filename):
     elif 'mov' in extension:
         value = 'video/quicktime'
     else:
-        print("File extension not recognized. Please reformat files or add extension to get_file_type function")
+        print("File extension for " + filename + " not recognized. Please reformat files or add extension to "
+                                                 "get_file_type function")
         sys.exit()
     return value
 
