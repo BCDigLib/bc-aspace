@@ -43,47 +43,47 @@
     
     <!-- Template for WAV audio files -->
     <xsl:template name="WaveformAudio">
-        <xsl:text>[{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
+        <xsl:text>{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
         <xsl:text>"filesize":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:size"/><xsl:text>",</xsl:text>
         <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>",</xsl:text>
         <xsl:text>"duration-H:M:S":"</xsl:text><xsl:value-of select="fits:metadata/fits:audio/fits:duration"/><xsl:text>",</xsl:text>
         <xsl:text>"sampleRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:audio/fits:sampleRate"/><xsl:text>",</xsl:text>
-        <xsl:text>"bitDepth":"</xsl:text><xsl:value-of select="fits:metadata/fits:audio/fits:bitDepth"/><xsl:text>"}]</xsl:text>
+        <xsl:text>"bitDepth":"</xsl:text><xsl:value-of select="fits:metadata/fits:audio/fits:bitDepth"/><xsl:text>"}</xsl:text>
     </xsl:template>    
     
     <!-- Template for PDF files -->
     <xsl:template name="PDF">
-        <xsl:text>[{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
+        <xsl:text>{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
         <xsl:text>"filesize":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:size"/><xsl:text>",</xsl:text>
-        <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>"}]</xsl:text>
+        <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>"}</xsl:text>
     </xsl:template>
     
     <!-- Template for TIFF files-->
     <xsl:template name="TIFF">
-        <xsl:text>[{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
+        <xsl:text>{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
         <xsl:text>"filesize":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:size"/><xsl:text>",</xsl:text>
         <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>",</xsl:text>
         <xsl:text>"pixelDimensions":"</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:imageWidth"/><xsl:text>x</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:imageHeight"/><xsl:text>",</xsl:text>
         <xsl:text>"resolution":"</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:xSamplingFrequency"/><xsl:text>",</xsl:text>
         <xsl:text>"bitsPerSample":"</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:bitsPerSample/@toolname='Exiftool'"/><xsl:text>",</xsl:text>
-        <xsl:text>"colorSpace":"</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:colorSpace"/><xsl:text>"}]</xsl:text>
+        <xsl:text>"colorSpace":"</xsl:text><xsl:value-of select="fits:metadata/fits:image/fits:colorSpace"/><xsl:text>"}</xsl:text>
     </xsl:template>
     
     <!-- Template for doc and docx files -->
     <xsl:template name="DOC">
-        <xsl:text>[{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
+        <xsl:text>{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
         <xsl:text>"filesize":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:size"/><xsl:text>",</xsl:text>
         <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>",</xsl:text>
         <xsl:text>"createDeate":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:created"/><xsl:text>",</xsl:text>
         <xsl:text>"creatingApplicationName":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:creatingApplicationName"/><xsl:text>",</xsl:text>
         <xsl:text>"creatingApplicationVersion":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:creatingApplicationVersion"/><xsl:text>",</xsl:text>
         <xsl:text>"author":"</xsl:text><xsl:value-of select="fits:metadata/fits:document/fits:author"/><xsl:text>",</xsl:text>
-        <xsl:text>"title":"</xsl:text><xsl:value-of select="fits:metadata/fits:document/fits:title"/><xsl:text>"}]</xsl:text>
+        <xsl:text>"title":"</xsl:text><xsl:value-of select="fits:metadata/fits:document/fits:title"/><xsl:text>"}</xsl:text>
     </xsl:template>
     
     <!-- Template for mov files -->
     <xsl:template name="MOV">
-        <xsl:text>[{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
+        <xsl:text>{"format":"</xsl:text><xsl:value-of select="fits:identification/fits:identity[1]/@format"/><xsl:text>",</xsl:text>
         <xsl:text>"filesize":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:size"/><xsl:text>",</xsl:text>
         <xsl:text>"checksum":"</xsl:text><xsl:value-of select="fits:fileinfo/fits:md5checksum"/><xsl:text>",</xsl:text>
         <xsl:text>"bitDepth":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:bitDepth"/><xsl:text>",</xsl:text>
@@ -91,7 +91,7 @@
         <xsl:text>"duration-Ms":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:duration"/><xsl:text>",</xsl:text>
         <xsl:text>"bitRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:bitRate"/><xsl:text>",</xsl:text>
         <xsl:text>"frameRate":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:frameRate"/><xsl:text>",</xsl:text>
-        <xsl:text>"chromaSubsampling":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:chromaSubsampling"/><xsl:text>"}]</xsl:text>
+        <xsl:text>"chromaSubsampling":"</xsl:text><xsl:value-of select="fits:metadata/fits:video/fits:track[@type='video']/fits:chromaSubsampling"/><xsl:text>"}</xsl:text>
     </xsl:template>
     
     
