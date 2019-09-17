@@ -120,14 +120,9 @@ def main():
         file_names = files_listing[unique_id]
         file_names.sort()
         for name in file_names:
-            lab_val = "Master"
-            if "INT" in name:
-                lab_val = "Intermediate"
-            elif "ACC" in name:
-                lab_val = "Access"
             period_loc = name.index('.')
             base_name = name[0:period_loc]
-            dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': lab_val,
+            dig_obj = {'jsonmodel_type': 'digital_object_component', 'publish': False, 'label': base_name,
                         'file_versions':build_comp_file_version(name, tech_data), 'title': base_name,
                         'display_string': name, 'digital_object': {'ref': dig_obj_uri}}
             dig_obj_data = json.dumps(dig_obj)
