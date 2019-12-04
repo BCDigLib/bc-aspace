@@ -1728,11 +1728,11 @@
             <!-- <xsl:apply-templates select="ead:origination" mode="dsc"/>  -->          
             <xsl:if test="not(ead:unittitle)">
                 <xsl:value-of select="ead:unitdate"/> 
-            </xsl:if>
-            <xsl:apply-templates select="ead:physdesc" mode="dsc"/>                    
+            </xsl:if>                 
             <xsl:apply-templates select="ead:physloc" mode="dsc"/>    
             <xsl:apply-templates select="ead:dao" mode="dsc"/>            
-            <xsl:apply-templates select="ead:daogrp" mode="dsc"/>            
+            <xsl:apply-templates select="ead:daogrp" mode="dsc"/>   
+            <xsl:apply-templates select="ead:physdesc" mode="dsc"/>   
             <xsl:apply-templates select="ead:langmaterial" mode="dsc"/>            
             <xsl:apply-templates select="ead:materialspec" mode="dsc"/>            
             <xsl:apply-templates select="ead:abstract" mode="dsc"/>             
@@ -1744,11 +1744,6 @@
         (<xsl:apply-templates/>)
     </xsl:template>
     <xsl:template match="ead:unitdate" mode="did"><xsl:apply-templates/></xsl:template>
-    <!-- Formats physical description -->
-    <xsl:template match="ead:physdesc" mode="dsc">
-        <xsl:value-of select="ead:extent[1]"/> (<xsl:value-of select="ead:extent[2]"/>)
-        <xsl:apply-templates/>
-    </xsl:template>
     <!-- Special formatting for elements in the collection inventory list -->
     <xsl:template match="ead:repository | ead:origination[@label='creator'] | ead:unitdate | ead:unitid  
         | ead:physloc | ead:langmaterial | ead:materialspec | ead:container 
@@ -1858,6 +1853,12 @@
         </xsl:when>
         </xsl:choose>
     </xsl:template> 
+    <!-- Formats physical description -->
+    <xsl:template match="ead:physdesc" mode="dsc">
+        <!-- Add header formatting for physdesc notes and move to after DAO block -->
+        <fo:block xsl:use-attribute-sets="h4">Physical Description</fo:block>
+        <xsl:apply-templates/>
+    </xsl:template>
     <!-- Everything else in the dsc -->
     <xsl:template mode="dsc" match="*">
         <xsl:if test="child::*">
