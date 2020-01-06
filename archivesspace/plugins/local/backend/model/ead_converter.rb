@@ -1,3 +1,12 @@
+# Note: This version of the EAD converter patches an issue involving the
+# unintentional publication of external IDs (Archivists' Toolkit IDs in our case)
+# into the EAD.
+#
+# This should be reviewed periodically against the latest version of the EAD
+# converter in the core code.
+#
+# See also: plugins/local/backend/model/ead.rb
+
 #require_relative 'converter'
 class EADConverter < Converter
 
@@ -125,6 +134,7 @@ class EADConverter < Converter
     end
 
 
+    # Block publication of external_ids to unitid
     with 'unitid' do |node|
       ancestor(:note_multipart, :resource, :archival_object) do |obj|
         case obj.class.record_type

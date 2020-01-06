@@ -1,24 +1,28 @@
+# This version of mets.rb partially addresses ANW-937: https://archivesspace.atlassian.net/browse/ANW-937
+# See PR #1751: https://github.com/archivesspace/archivesspace/pull/1751
+
 require 'time'
 
-class METSSerializer < ASpaceExport::Serializer 
+class METSSerializer < ASpaceExport::Serializer
   serializer_for :mets
 
   private
 
   def mets(data, xml, dmd = "mods")
-    xml.mets('xmlns' => 'http://www.loc.gov/METS/', 
-             'xmlns:mods' => 'http://www.loc.gov/mods/v3', 
-             'xmlns:dc' => 'http://purl.org/dc/elements/1.1/', 
+    xml.mets('xmlns' => 'http://www.loc.gov/METS/',
+             'xmlns:mods' => 'http://www.loc.gov/mods/v3',
+             'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
              'xmlns:xlink' => 'http://www.w3.org/1999/xlink',
              'xmlns:xsi' => "http://www.w3.org/2001/XMLSchema-instance",
              'xsi:schemaLocation' => "http://www.loc.gov/METS/ http://www.loc.gov/standards/mets/mets.xsd"){
+
       xml.metsHdr(:CREATEDATE => Time.now.iso8601) {
         xml.agent(:ROLE => data.header_agent_role, :TYPE => data.header_agent_type) {
           xml.name data.header_agent_name
           data.header_agent_notes.each do |note|
             xml.note note
           end
-        }        
+        }
       }
 
       xml.dmdSec(:ID => data.dmd_id) {
@@ -30,7 +34,7 @@ class METSSerializer < ASpaceExport::Serializer
                 mods_serializer.serialize_mods(data.mods_model, xml)
               end
             }
-          }          
+          }
         elsif dmd == 'dc'
           xml.mdWrap(:MDTYPE => 'DC') {
             xml.xmlData {
@@ -48,10 +52,10 @@ class METSSerializer < ASpaceExport::Serializer
       end
 
       xml.amdSec {
-        
+
       }
 
-      xml.fileSec { 
+      xml.fileSec {
         data.with_file_groups do |file_group|
           xml.fileGrp(:USE => file_group.use) {
             file_group.with_files do |file|
