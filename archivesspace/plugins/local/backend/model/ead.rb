@@ -1,3 +1,14 @@
+# Note: this version of the EAD serializer patches an old issue involving the
+# unintentional publication of external IDs (Archivists' Toolkit IDs in our case)
+# into the EAD. In recent versions of ASpace, this has been fixed by including
+# external IDs only if 'include unpublished' is toggled.
+#
+# We should test the most recent version of the EAD serializer in the
+# core code to confirm that it works for us. If not, we should periodically
+# update this version to include other enhancements added to the core code.
+#
+# See also: plugins/local/backend/model/ead_converter.rb
+
 # encoding: utf-8
 require 'nokogiri'
 require 'securerandom'
@@ -40,8 +51,8 @@ class EADSerializer < ASpaceExport::Serializer
 
 
   def handle_linebreaks(content)
-    # 4archon... 
-    content.gsub!("\n\t", "\n\n")  
+    # 4archon...
+    content.gsub!("\n\t", "\n\n")
     # if there's already p tags, just leave as is
     return content if ( content.strip =~ /^<p(\s|\/|>)/ or content.strip.length < 1 )
     original_content = content
@@ -157,6 +168,7 @@ class EADSerializer < ASpaceExport::Serializer
 
             xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.')
 
+            # Disable serialization of external_ids
             #data.external_ids.each do |exid|
             #  xml.unitid  ({ "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
             #end
