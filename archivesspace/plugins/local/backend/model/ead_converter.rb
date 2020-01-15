@@ -1,11 +1,17 @@
-# Note: This version of the EAD converter patches an issue involving the
+# This version of the EAD converter patches an old issue involving the
 # unintentional publication of external IDs (Archivists' Toolkit IDs in our case)
-# into the EAD.
+# into the unitid field of the EAD.
 #
-# This should be reviewed periodically against the latest version of the EAD
-# converter in the core code.
+# Version 2.1.2 of ArchivesSpace patched this by publishing external
+# IDs only if 'include unpublished' is toggled. However, we don't ever want 
+# external IDs published in our EAD, so the core code may still cause problems.
+#
+# When we update ASpace, we should test recent version of the EAD converter in the
+# core code to confirm that it works for us. If not, we should periodically
+# update this version to include other enhancements added to the core code.
 #
 # See also: plugins/local/backend/model/ead.rb
+# See also: https://archivesspace.atlassian.net/browse/AR-1868
 
 #require_relative 'converter'
 class EADConverter < Converter
