@@ -150,13 +150,13 @@ class EADSerializer < ASpaceExport::Serializer
           xml.did {
 
 
-            if (val = data.language)
-              xml.langmaterial {
-                xml.language(:langcode => val) {
-                  xml.text I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
-                }
-              }
-            end
+            #if (val = data.language)
+            #  xml.langmaterial {
+            #    xml.language(:langcode => val) {
+            #      xml.text I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
+            #    }
+            #  }
+            #end
 
             if (val = data.repo.name)
               xml.repository {
@@ -182,6 +182,10 @@ class EADSerializer < ASpaceExport::Serializer
             serialize_dates(data, xml, @fragments)
 
             serialize_did_notes(data, xml, @fragments)
+
+            if (languages = data.lang_materials)	
+              serialize_languages(languages, xml, @fragments)	
+            end
 
             data.instances_with_sub_containers.each do |instance|
               serialize_container(instance, xml, @fragments)
@@ -284,6 +288,10 @@ class EADSerializer < ASpaceExport::Serializer
         serialize_extents(data, xml, fragments)
         serialize_dates(data, xml, fragments)
         serialize_did_notes(data, xml, fragments)
+
+        if (languages = data.lang_materials)	
+          serialize_languages(languages, xml, fragments)	
+        end
 
         EADSerializer.run_serialize_step(data, xml, fragments, :did)
 
@@ -588,6 +596,67 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
+  def serialize_languages(languages, xml, fragments)
+    lm = []
+    language_notes = languages.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
+    if !language_notes.empty?
+      language_notes.each do |note|
+        unless note["publish"] === false && !@include_unpublished
+          audatt = note["publish"] === false ? {:audience => 'internal'} : {}
+          content = ASpaceExport::Utils.extract_note_text(note, @include_unpublished)
+
+          att = { :id => prefix_id(note['persistent_id']) }.reject {|k,v| v.nil? || v.empty? || v == "null" }
+          att ||= {}
+
+          xml.send(note['type'], att.merge(audatt)) {
+            sanitize_mixed_content(content, xml, fragments, ASpaceExport::Utils.include_p?(note['type']))
+          }
+          lm << note
+        end
+      end
+      if lm == []
+        languages = languages.map{|l| l['language_and_script']}.compact
+        xml.langmaterial {
+          languages.map {|language|
+            punctuation = language.equal?(languages.last) ? '.' : ', '
+            lang_translation = I18n.t("enumerations.language_iso639_2.#{language['language']}", :default => language['language'])
+            if language['script']
+              xml.language(:langcode => language['language'], :scriptcode => language['script']) {
+                xml.text(lang_translation)
+              }
+            else
+              xml.language(:langcode => language['language']) {
+                xml.text(lang_translation)
+              }
+            end
+            xml.text(punctuation)
+          }
+        }
+      end
+    # ANW-697: If no Language Text subrecords are available, the Language field translation values for each Language and Script subrecord should be exported, separated by commas, enclosed in <language> elements with associated @langcode and @scriptcode attribute values, and terminated by a period.
+    else
+      languages = languages.map{|l| l['language_and_script']}.compact
+      if !languages.empty?
+        xml.langmaterial {
+          languages.map {|language|
+            punctuation = language.equal?(languages.last) ? '.' : ', '
+            lang_translation = I18n.t("enumerations.language_iso639_2.#{language['language']}", :default => language['language'])
+            if language['script']
+              xml.language(:langcode => language['language'], :scriptcode => language['script']) {
+                xml.text(lang_translation)
+              }
+            else
+              xml.language(:langcode => language['language']) {
+                xml.text(lang_translation)
+              }
+            end
+            xml.text(punctuation)
+          }
+        }
+      end
+    end
+  end
+
   def serialize_note_content(note, xml, fragments)
     return if note["publish"] === false && !@include_unpublished
     audatt = note["publish"] === false ? {:audience => 'internal'} : {}
@@ -776,7 +845,7 @@ class EADSerializer < ASpaceExport::Serializer
         creation = "This finding aid was produced using ArchivesSpace on <date>#{Time.now}</date>."
         xml.creation {  sanitize_mixed_content( creation, xml, fragments) }
 
-        if (val = data.finding_aid_language)
+        if (val = data.finding_aid_language_note)
           xml.langusage (fragments << val)
         end
 
