@@ -16,6 +16,8 @@
 # encoding: utf-8
 require 'nokogiri'
 require 'securerandom'
+require 'cgi'
+
 class EADSerializer < ASpaceExport::Serializer
   serializer_for :ead
 
@@ -53,6 +55,32 @@ class EADSerializer < ASpaceExport::Serializer
     Nokogiri::XML("<wrap>#{content}</wrap>").errors.reject { |e| e.message =~ ignore  }
   end
 
+  # ANW-716: We may have content with a mix of loose '&' chars that need to be escaped, along with pre-escaped HTML entities
+  # Example:
+  # c                 => "This is the &lt; test & for the <title>Sanford &amp; Son</title>
+  # escape_content(c) => "This is the &lt; test &amp; for the <title>Sanford &amp; Son</title>
+  # we want to leave the pre-escaped entities alone, and escape the loose & chars
+
+  def escape_content(content)
+    # first, find any pre-escaped entities and "mark" them by replacing & with @@
+    # so something like &lt; becomes @@lt;
+    # and &#1234 becomes @@#1234
+
+    content.gsub!(/&\w+;/) {|t| t.gsub('&', '@@')}
+    content.gsub!(/&#\d{4}/) {|t| t.gsub('&', '@@')}
+    content.gsub!(/&#\d{3}/) {|t| t.gsub('&', '@@')}
+
+    # now we know that all & characters remaining are not part of some pre-escaped entity, and we can escape them safely
+    content.gsub!('&', '&amp;')
+
+    # 'unmark' our pre-escaped entities
+    content.gsub!(/@@\w+;/) {|t| t.gsub('@@', '&')}
+    content.gsub!(/@@#\d{4}/) {|t| t.gsub('@@', '&')}
+    content.gsub!(/@@#\d{3}/) {|t| t.gsub('@@', '&')}
+
+    return content
+  end
+
 
   def handle_linebreaks(content)
     # 4archon...
@@ -62,19 +90,13 @@ class EADSerializer < ASpaceExport::Serializer
     original_content = content
     blocks = content.split("\n\n").select { |b| !b.strip.empty? }
     if blocks.length > 1
-      content = blocks.inject("") { |c,n| c << "<p>#{n.chomp}</p>"  }
+      content = blocks.inject("") do |c,n|
+        c << "<p>#{escape_content(n.chomp)}</p>"
+      end
     else
-      content = "<p>#{content.strip}</p>"
+      content = "<p>#{escape_content(content.strip)}</p>"
     end
 
-    # first lets see if there are any &
-    # note if there's a &somewordwithnospace , the error is EntityRef and wont
-    # be fixed here...
-    if xml_errors(content).any? { |e| e.message.include?("The entity name must immediately follow the '&' in the entity reference.") }
-      content.gsub!("& ", "&amp; ")
-    end
-
-    # in some cases adding p tags can create invalid markup with mixed content
     # just return the original content if there's still problems
     xml_errors(content).any? ? original_content : content
   end
@@ -87,9 +109,24 @@ class EADSerializer < ASpaceExport::Serializer
     content = content.gsub(/\xE2\x80\x9C/, '"').gsub(/\xE2\x80\x9D/, '"').gsub(/\xE2\x80\x98/, "\'").gsub(/\xE2\x80\x99/, "\'")
   end
 
-  def sanitize_mixed_content(content, context, fragments, allow_p = false  )
-#    return "" if content.nil?
 
+  # ANW-669: Fix for attributes in mixed content causing errors when validating against the EAD schema.
+
+  # If content looks like it contains a valid XML element with an attribute from the expected list,
+  # then replace the attribute like " foo=" with " xlink:foo=".
+
+  # References used for valid element and attribute names:
+  # https://www.xml.com/pub/a/2001/07/25/namingparts.html
+  # https://razzed.com/2009/01/30/valid-characters-in-attribute-names-in-htmlxml/
+
+  def add_xlink_prefix(content)
+    %w{ actuate arcrole entityref from href id linktype parent role show target title to xpointer }.each do | xa |
+      content.gsub!(/ #{xa}=/) {|match| " xlink:#{match.strip}"} if content =~ / #{xa}=/
+    end
+    content
+  end
+
+  def sanitize_mixed_content(content, context, fragments, allow_p = false  )
     # remove smart quotes from text
     content = remove_smart_quotes(content)
 
@@ -100,12 +137,19 @@ class EADSerializer < ASpaceExport::Serializer
     if allow_p
       content = handle_linebreaks(content)
     else
+      escape_content(content)
       content = strip_p(content)
     end
 
+    # ANW-669 - only certain EAD elements will have attributes that need
+    # xlink added so only do this processing if the element is there
+    # attribute check is inside the add_xlink_prefix method
+    xlink_eles = %w{ arc archref bibref extptr extptrloc extref extrefloc linkgrp ptr ptrloc ref refloc resource title }
+    content = add_xlink_prefix(content) if xlink_eles.any? { |word| content =~ /<#{word}\s/ }
+
     begin
       if ASpaceExport::Utils.has_html?(content)
-        context.text( fragments << content )
+        context.text (fragments << content )
       else
         context.text content.gsub("&amp;", "&") #thanks, Nokogiri
       end
@@ -173,8 +217,10 @@ class EADSerializer < ASpaceExport::Serializer
             xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.')
 
             # Disable serialization of external_ids
-            #data.external_ids.each do |exid|
-            #  xml.unitid  ({ "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+            #if @include_unpublished
+            #  data.external_ids.each do |exid|
+            #    xml.unitid  ({ "audience" => "internal", "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+            #  end
             #end
 
             serialize_extents(data, xml, @fragments)
@@ -183,8 +229,8 @@ class EADSerializer < ASpaceExport::Serializer
 
             serialize_did_notes(data, xml, @fragments)
 
-            if (languages = data.lang_materials)	
-              serialize_languages(languages, xml, @fragments)	
+            if (languages = data.lang_materials)
+              serialize_languages(languages, xml)
             end
 
             data.instances_with_sub_containers.each do |instance|
@@ -196,7 +242,7 @@ class EADSerializer < ASpaceExport::Serializer
           }# </did>
 
           data.digital_objects.each do |dob|
-                serialize_digital_object(dob, xml, @fragments)
+            serialize_digital_object(dob, xml, @fragments)
           end
 
           serialize_nondid_notes(data, xml, @fragments)
@@ -274,14 +320,29 @@ class EADSerializer < ASpaceExport::Serializer
           xml.unittitle {  sanitize_mixed_content( val,xml, fragments) }
         end
 
-        if !data.component_id.nil? && !data.component_id.empty? #&&
-          #!(data.external_ids.select {|x| x['external_id'] == data.component_id }).empty?
-          xml.unitid data.component_id
-
+        if AppConfig[:arks_enabled]
+          ark_url = ArkName::get_ark_url(data.id, :archival_object)
+          if ark_url
+            # <unitid><extref xlink:href="ARK" xlink:actuate="onLoad" xlink:show="new" xlink:linktype="simple">ARK</extref></unitid>
+            xml.unitid {
+              xml.extref ({"xlink:href" => ark_url,
+                          "xlink:actuate" => "onLoad",
+                          "xlink:show" => "new",
+                          "xlink:type" => "simple"
+                          }) { xml.text 'Archival Resource Key' }
+                          }
+          end
         end
 
-        #data.external_ids.each do |exid|
-        #  xml.unitid  ({ "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+        if !data.component_id.nil? && !data.component_id.empty?
+          xml.unitid data.component_id
+        end
+
+        # Disable serialization of external_ids
+        #if @include_unpublished
+        #  data.external_ids.each do |exid|
+        #    xml.unitid  ({ "audience" => "internal",  "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+        #  end
         #end
 
         serialize_origination(data, xml, fragments)
@@ -289,8 +350,8 @@ class EADSerializer < ASpaceExport::Serializer
         serialize_dates(data, xml, fragments)
         serialize_did_notes(data, xml, fragments)
 
-        if (languages = data.lang_materials)	
-          serialize_languages(languages, xml, fragments)	
+        if (languages = data.lang_materials)
+          serialize_languages(languages, xml)
         end
 
         EADSerializer.run_serialize_step(data, xml, fragments, :did)
@@ -337,7 +398,11 @@ class EADSerializer < ASpaceExport::Serializer
     unless data.creators_and_sources.nil?
       data.creators_and_sources.each do |link|
         agent = link['_resolved']
-        role = link['role']
+        published = agent['publish'] === true
+
+        next if !published && !@include_unpublished
+
+        link['role'] == 'creator' ? role = link['role'].capitalize : role = link['role']
         relator = link['relator']
         sort_name = agent['display_name']['sort_name']
         rules = agent['display_name']['rules']
@@ -348,7 +413,10 @@ class EADSerializer < ASpaceExport::Serializer
                     when 'agent_family'; 'famname'
                     when 'agent_corporate_entity'; 'corpname'
                     end
-        xml.origination(:label => role) {
+
+        origination_attrs = {:label => role}
+        origination_attrs[:audience] = 'internal' unless published
+        xml.origination(origination_attrs) {
          atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber}
          atts.reject! {|k, v| v.nil?}
 
@@ -478,12 +546,23 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
+  # set daoloc audience attr == 'internal' if this is an unpublished && include_unpublished is set
+  def get_audience_flag_for_file_version(file_version)
+    if file_version['file_uri'] &&
+       (file_version['publish'] == false && @include_unpublished)
+      return "internal"
+    else
+      return "external"
+    end
+  end
 
   def serialize_digital_object(digital_object, xml, fragments)
     return if digital_object["publish"] === false && !@include_unpublished
     return if digital_object["suppressed"] === true
 
-    file_versions = digital_object['file_versions']
+    # ANW-285: Only serialize file versions that are published, unless include_unpublished flag is set
+    file_versions_to_display = digital_object['file_versions'].select {|fv| fv['publish'] == true || @include_unpublished }
+
     title = digital_object['title']
     date = digital_object['dates'][0] || {}
 
@@ -503,7 +582,7 @@ class EADSerializer < ASpaceExport::Serializer
     atts['xlink:title'] = digital_object['title'] if digital_object['title']
 
 
-    if file_versions.empty?
+    if file_versions_to_display.empty?
       atts['xlink:type'] = 'simple'
       atts['xlink:href'] = digital_object['digital_object_id']
       atts['xlink:actuate'] = 'onRequest'
@@ -511,23 +590,27 @@ class EADSerializer < ASpaceExport::Serializer
       xml.dao(atts) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
       }
-    elsif file_versions.length == 1
-        atts['xlink:type'] = 'simple'
-        atts['xlink:href'] = file_versions.first['file_uri'] || digital_object['digital_object_id']
-        atts['xlink:actuate'] = file_versions.first['xlink_actuate_attribute'] || 'onRequest'
-        atts['xlink:show'] = file_versions.first['xlink_show_attribute'] || 'new'
-        atts['xlink:role'] = file_versions.first['use_statement'] if file_versions.first['use_statement']
-        xml.dao(atts) {
-          xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
-        }
+    elsif file_versions_to_display.length == 1
+      file_version = file_versions_to_display.first
+
+      atts['xlink:type'] = 'simple'
+      atts['xlink:actuate'] = file_version['xlink_actuate_attribute'] || 'onRequest'
+      atts['xlink:show'] = file_version['xlink_show_attribute'] || 'new'
+      atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
+      atts['xlink:href'] = file_version['file_uri']
+      atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
+      xml.dao(atts) {
+        xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
+      }
     else
       xml.daogrp( atts.merge( { 'xlink:type' => 'extended'} ) ) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
-        file_versions.each do |file_version|
+        file_versions_to_display.each do |file_version|
           atts['xlink:type'] = 'locator'
-          atts['xlink:href'] = file_version['file_uri'] || digital_object['digital_object_id']
+          atts['xlink:href'] = file_version['file_uri']
           atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
           atts['xlink:title'] = file_version['caption'] if file_version['caption']
+          atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
           xml.daoloc(atts)
         end
       }
@@ -583,10 +666,16 @@ class EADSerializer < ASpaceExport::Serializer
 
       case note['type']
       when 'dimensions', 'physfacet'
+        att[:label] = note['label'] if note['label']
         xml.physdesc(audatt) {
           xml.send(note['type'], att) {
             sanitize_mixed_content( content, xml, fragments, ASpaceExport::Utils.include_p?(note['type'])  )
           }
+        }
+      when 'physdesc'
+        att[:label] = note['label'] if note['label']
+        xml.send(note['type'], att.merge(audatt)) {
+          sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
       else
         xml.send(note['type'], att.merge(audatt)) {
@@ -596,7 +685,7 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
-  def serialize_languages(languages, xml, fragments)
+  def serialize_languages(languages, xml)
     lm = []
     language_notes = languages.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
     if !language_notes.empty?
@@ -609,7 +698,7 @@ class EADSerializer < ASpaceExport::Serializer
           att ||= {}
 
           xml.send(note['type'], att.merge(audatt)) {
-            sanitize_mixed_content(content, xml, fragments, ASpaceExport::Utils.include_p?(note['type']))
+            sanitize_mixed_content(content, xml,ASpaceExport::Utils.include_p?(note['type']))
           }
           lm << note
         end
@@ -752,6 +841,11 @@ class EADSerializer < ASpaceExport::Serializer
 
 
   def serialize_eadheader(data, xml, fragments)
+
+    ark_url = AppConfig[:arks_enabled] ? ArkName::get_ark_url(data.id, :resource) : nil
+
+    eadid_url = ark_url.nil? ? data.ead_location : ark_url
+
     eadheader_atts = {:findaidstatus => data.finding_aid_status,
                       :repositoryencoding => "iso15511",
                       :countryencoding => "iso3166-1",
@@ -761,7 +855,7 @@ class EADSerializer < ASpaceExport::Serializer
     xml.eadheader(eadheader_atts) {
 
       eadid_atts = {:countrycode => data.repo.country,
-              :url => data.ead_location,
+              :url => eadid_url,
               :mainagencycode => data.mainagencycode}.reject{|k,v| v.nil? || v.empty? || v == "null" }
 
       xml.eadid(eadid_atts) {
@@ -854,18 +948,19 @@ class EADSerializer < ASpaceExport::Serializer
         end
       }
 
-      if data.revision_statements.length > 0
+      export_rs = @include_unpublished ? data.revision_statements : data.revision_statements.reject { |rs| !rs['publish'] }
+      if export_rs.length > 0
         xml.revisiondesc {
-          data.revision_statements.each do |rs|
-              if rs['description'] && rs['description'].strip.start_with?('<')
-                xml.text (fragments << rs['description'] )
-              else
-                xml.change {
-                  rev_date = rs['date'] ? rs['date'] : ""
-                  xml.date (fragments <<  rev_date )
-                  xml.item (fragments << rs['description']) if rs['description']
-                }
-              end
+          export_rs.each do |rs|
+            if rs['description'] && rs['description'].strip.start_with?('<')
+              xml.text (fragments << rs['description'] )
+            else
+              xml.change(rs['publish'] ? nil : {:audience => 'internal'}) {
+                rev_date = rs['date'] ? rs['date'] : ""
+                xml.date (fragments <<  rev_date )
+                xml.item (fragments << rs['description']) if rs['description']
+              }
+            end
           end
         }
       end

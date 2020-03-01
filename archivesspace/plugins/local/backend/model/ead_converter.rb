@@ -106,8 +106,9 @@ class EADConverter < Converter
 
   def self.configure
 
-    with 'ead' do |node|
+    with 'ead' do |*|
       make :resource, {
+        :publish => att('audience') != 'internal',
         :finding_aid_language => 'und',
         :finding_aid_script => 'Zyyy'
       }
@@ -121,10 +122,14 @@ class EADConverter < Converter
     end
 
     with 'archdesc' do |*|
+      publish = if !context_obj.publish || (att('audience') == 'internal')
+                  false
+                else
+                  true
+                end
       set :level, att('level') || 'otherlevel'
       set :other_level, att('otherlevel')
-      set :publish, att('audience') != 'internal'
-      # set :publish, att('audience') == 'external'
+      set :publish, publish
     end
 
 
@@ -223,6 +228,7 @@ class EADConverter < Converter
         set ancestor(:resource, :archival_object), :notes, note
       end
     end
+
 
     with "langmaterial" do |*|
       # if <langmaterial> contains encoded <language> tags create a matching language_and_script record
@@ -545,7 +551,7 @@ class EADConverter < Converter
 
     with 'chronlist' do |*|
       if  ancestor(:note_multipart)
-        left_overs = insert_into_subnotes
+        left_overs = insert_into_subnotes('chronlist')
       else
         left_overs = nil
         make :note_multipart, {
@@ -699,7 +705,7 @@ class EADConverter < Converter
       end
     end
 
-    def get_or_make_top_container(type, indicator, barcode, container_profile_name)
+    def get_or_make_top_container_uri(type, indicator, barcode, container_profile_name)
       # remember the top_containers we make in this hash
       # the values are top_container uris
       # the keys are barcodes or type:indicator
@@ -709,16 +715,16 @@ class EADConverter < Converter
       #   - type:indicator is not unique
       #       but only the last one seen will need to be added to
       #       so it's actually a blessing that prior ones get blatted
-      @top_containers ||= {}
+      @top_container_uris ||= {}
 
       if barcode
-        if (top_container_uri = @top_containers[barcode] || TopContainer.for_barcode(barcode))
-          return top_container_uri
+        if @top_container_uris[barcode]
+          return @top_container_uris[barcode]
+        elsif (TopContainer.for_barcode(barcode) && TopContainer.for_barcode(barcode).uri)
+          return TopContainer.for_barcode(barcode).uri
         end
-      else
-        if (top_container_uri = @top_containers["#{type}:#{indicator}"])
-          return top_container_uri
-        end
+      elsif @top_container_uris["#{type}:#{indicator}"]
+        return @top_container_uris["#{type}:#{indicator}"]
       end
 
       # don't make a container_profile, but link to one if there's a match
@@ -735,9 +741,9 @@ class EADConverter < Converter
       end
 
       if barcode
-        @top_containers[barcode] = context_obj.uri
+        @top_container_uris[barcode] = context_obj.uri
       else
-        @top_containers["#{type}:#{indicator}"] = context_obj.uri
+        @top_container_uris["#{type}:#{indicator}"] = context_obj.uri
       end
 
       context_obj.uri
@@ -795,7 +801,7 @@ class EADConverter < Converter
 
       instance = context_obj
 
-      top_container_uri = get_or_make_top_container(att('type'),
+      top_container_uri = get_or_make_top_container_uri(att('type'),
                                                     format_content(inner_xml),
                                                     barcode,
                                                     att("altrender"))
@@ -877,10 +883,10 @@ class EADConverter < Converter
       end
     end
 
-
     with 'revisiondesc/change' do |*|
       make :revision_statement
       set ancestor(:resource), :revision_statements, proxy
+      set :publish, !(att('audience') === 'internal')
     end
 
     with 'revisiondesc/change/item' do |*|
@@ -1041,7 +1047,8 @@ class EADConverter < Converter
   def make_corp_template(opts)
     return nil if inner_xml.strip.empty?
     make :agent_corporate_entity, {
-      :agent_type => 'agent_corporate_entity'
+      :agent_type => 'agent_corporate_entity',
+      :publish => att('audience') == 'external' ?  true : false
     } do |corp|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => corp.uri, 'role' => opts[:role]}
     end
@@ -1061,6 +1068,7 @@ class EADConverter < Converter
     return nil if inner_xml.strip.empty?
     make :agent_family, {
       :agent_type => 'agent_family',
+      :publish => att('audience') == 'external' ?  true : false
     } do |family|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => family.uri, 'role' => opts[:role]}
     end
@@ -1080,6 +1088,7 @@ class EADConverter < Converter
     return nil if inner_xml.strip.empty?
     make :agent_person, {
       :agent_type => 'agent_person',
+      :publish => att('audience') == 'external' ?  true : false
     } do |person|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => person.uri, 'role' => opts[:role]}
     end
