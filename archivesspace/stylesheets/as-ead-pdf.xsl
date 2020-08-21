@@ -121,11 +121,7 @@
         <xsl:attribute name="border">.5pt solid #ccc</xsl:attribute>
         <xsl:attribute name="border-collapse">seperate</xsl:attribute>
     </xsl:attribute-set>
-    
-   <!-- Variables to change publisher info without changing repository profile -->
-    <xsl:variable name="repo" select="ead:ead/ead:eadheader/ead:filedesc/ead:titlestmt/ead:titleproper/ead:num"/>
    
-    
     <!--  Start main page design and layout -->
     <xsl:template match="/">
         <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" font-size="12pt" font-family="serif">
@@ -150,7 +146,7 @@
                     <fo:region-after extent="0.2in"/>
                 </fo:simple-page-master>
             </fo:layout-master-set>
-            <fo:declarations>
+           <fo:declarations>
                 <x:xmpmeta xmlns:x="adobe:ns:meta/">
                     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
                         <rdf:Description rdf:about=""
@@ -199,7 +195,7 @@
                             <dc:description>
                                 <xsl:value-of select="/ead:ead/ead:archdesc/ead:did/ead:abstract"/>
                             </dc:description>
-                            <!--SUBJECTS-->
+                            <!-- SUBJECTS -->
                             <dc:subject>    
                                 <xsl:for-each select="/ead:ead/ead:archdesc/ead:did/ead:origination/ead:persname">
                                     
@@ -356,6 +352,8 @@
         </fo:block>
     </xsl:template>
     <xsl:template match="ead:publicationstmt" mode="coverPage">
+        <!-- Variables to change publisher info without changing repository profile -->
+        <xsl:variable name="repo" select="ead:ead/ead:eadheader/ead:filedesc/ead:titlestmt/ead:titleproper/ead:num"/>
         <fo:block margin="0 1in">
             <fo:block>
                 <!-- Commenting out line that pulls publisher info from EAD so that this info can
