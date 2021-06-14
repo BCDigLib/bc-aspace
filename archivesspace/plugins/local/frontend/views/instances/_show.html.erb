@@ -1,3 +1,6 @@
+<!-- most recent file version: v2.8.1 -->
+<!-- https://github.com/archivesspace/archivesspace/blob/v2.8.1/frontend/app/views/instances/_show.html.erb -->
+
 <%
    section_id = "instances" if section_id.blank?
 %>
@@ -19,10 +22,11 @@
             <div class="col-md-7">
               <% if instance["instance_type"] == "digital_object" %>
                 <%= instance["digital_object"]["_resolved"]["title"] %>
-              <!-- Check if instance was migrated -->
-              <% elsif instance["instance_type"] == "accession" && Date.parse(instance["create_time"]) < Date.parse('2017-06-04') && 
+              <!-- BEGIN Check if instance was migrated -->
+              <% elsif instance["instance_type"] == "accession" && Date.parse(instance["create_time"]) < Date.parse('2017-06-04') &&
               !instance["sub_container"]["top_container"]["_resolved"]["container_locations"].first["note"].nil? %>
                 <%= instance["sub_container"]["top_container"]["_resolved"]["container_locations"].first["note"]  %>
+              <!-- END Check if instance was migrated -->  
               <% elsif instance["sub_container"] and instance["sub_container"].length > 0 %>
                 <%= instance["sub_container"]["top_container"]["_resolved"]["display_string"] %>
               <% end %>

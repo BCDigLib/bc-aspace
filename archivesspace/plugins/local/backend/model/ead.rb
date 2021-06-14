@@ -1,19 +1,11 @@
-# This version of the EAD serializer patches an old issue involving the
-# unintentional publication of external IDs (Archivists' Toolkit IDs in our case)
-# into the unitid field of the EAD.
-#
-# Version 2.1.2 of ArchivesSpace patched this by publishing external
-# IDs only if 'include unpublished' is toggled. However, we don't ever want 
-# external IDs published in our EAD, so the core code may still cause problems.
-#
-# When we update ASpace, we should test recent version of the EAD serializer in the
-# core code to confirm that it works for us. If not, we should periodically
-# update this version to include other enhancements added to the core code.
-#
-# See also: plugins/local/backend/model/ead_converter.rb
-# See also: https://archivesspace.atlassian.net/browse/AR-1868
-
 # encoding: utf-8
+
+# most recent file version: v2.8.1
+# https://github.com/archivesspace/archivesspace/blob/v2.8.1/backend/app/exporters/serializers/ead.rb
+
+# BC local edits: 
+#  see method serialize_languages()
+
 require 'nokogiri'
 require 'securerandom'
 require 'cgi'
@@ -193,15 +185,6 @@ class EADSerializer < ASpaceExport::Serializer
 
           xml.did {
 
-
-            #if (val = data.language)
-            #  xml.langmaterial {
-            #    xml.language(:langcode => val) {
-            #      xml.text I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
-            #    }
-            #  }
-            #end
-
             if (val = data.repo.name)
               xml.repository {
                 xml.corpname { sanitize_mixed_content(val, xml, @fragments) }
@@ -216,12 +199,11 @@ class EADSerializer < ASpaceExport::Serializer
 
             xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.')
 
-            # Disable serialization of external_ids
-            #if @include_unpublished
-            #  data.external_ids.each do |exid|
-            #    xml.unitid  ({ "audience" => "internal", "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
-            #  end
-            #end
+            if @include_unpublished
+              data.external_ids.each do |exid|
+                xml.unitid  ({ "audience" => "internal", "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+              end
+            end
 
             serialize_extents(data, xml, @fragments)
 
@@ -230,7 +212,7 @@ class EADSerializer < ASpaceExport::Serializer
             serialize_did_notes(data, xml, @fragments)
 
             if (languages = data.lang_materials)
-              serialize_languages(languages, xml)
+              serialize_languages(languages, xml, @fragments)
             end
 
             data.instances_with_sub_containers.each do |instance|
@@ -338,12 +320,11 @@ class EADSerializer < ASpaceExport::Serializer
           xml.unitid data.component_id
         end
 
-        # Disable serialization of external_ids
-        #if @include_unpublished
-        #  data.external_ids.each do |exid|
-        #    xml.unitid  ({ "audience" => "internal",  "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
-        #  end
-        #end
+        if @include_unpublished
+          data.external_ids.each do |exid|
+            xml.unitid  ({ "audience" => "internal",  "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+          end
+        end
 
         serialize_origination(data, xml, fragments)
         serialize_extents(data, xml, fragments)
@@ -351,7 +332,7 @@ class EADSerializer < ASpaceExport::Serializer
         serialize_did_notes(data, xml, fragments)
 
         if (languages = data.lang_materials)
-          serialize_languages(languages, xml)
+          serialize_languages(languages, xml, fragments)
         end
 
         EADSerializer.run_serialize_step(data, xml, fragments, :did)
@@ -412,6 +393,7 @@ class EADSerializer < ASpaceExport::Serializer
                     when 'agent_person'; 'persname'
                     when 'agent_family'; 'famname'
                     when 'agent_corporate_entity'; 'corpname'
+                    when 'agent_software'; 'name'
                     end
 
         origination_attrs = {:label => role}
@@ -431,20 +413,17 @@ class EADSerializer < ASpaceExport::Serializer
   def serialize_controlaccess(data, xml, fragments)
     if (data.controlaccess_subjects.length + data.controlaccess_linked_agents.length) > 0
       xml.controlaccess {
-
         data.controlaccess_subjects.each do |node_data|
           xml.send(node_data[:node_name], node_data[:atts]) {
             sanitize_mixed_content( node_data[:content], xml, fragments, ASpaceExport::Utils.include_p?(node_data[:node_name]) )
           }
         end
 
-
         data.controlaccess_linked_agents.each do |node_data|
           xml.send(node_data[:node_name], node_data[:atts]) {
             sanitize_mixed_content( node_data[:content], xml, fragments,ASpaceExport::Utils.include_p?(node_data[:node_name]) )
           }
         end
-
       } #</controlaccess>
     end
   end
@@ -546,13 +525,13 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
-  # set daoloc audience attr == 'internal' if this is an unpublished && include_unpublished is set
-  def get_audience_flag_for_file_version(file_version)
-    if file_version['file_uri'] &&
-       (file_version['publish'] == false && @include_unpublished)
-      return "internal"
+  def is_digital_object_published?(digital_object, file_version = nil)
+    if !digital_object['publish']
+      return false
+    elsif !file_version.nil? and !file_version['publish']
+      return false
     else
-      return "external"
+      return true
     end
   end
 
@@ -566,7 +545,7 @@ class EADSerializer < ASpaceExport::Serializer
     title = digital_object['title']
     date = digital_object['dates'][0] || {}
 
-    atts = digital_object["publish"] === false ? {:audience => 'internal'} : {}
+    atts = {}
 
     content = ""
     content << title if title
@@ -574,8 +553,8 @@ class EADSerializer < ASpaceExport::Serializer
     if date['expression']
       content << date['expression']
     elsif date['begin']
-      content << date['begin']
-      if date['end'] != date['begin']
+    content << date['begin']
+    if date['end'] != date['begin']
         content << "-#{date['end']}"
       end
     end
@@ -587,6 +566,7 @@ class EADSerializer < ASpaceExport::Serializer
       atts['xlink:href'] = digital_object['digital_object_id']
       atts['xlink:actuate'] = 'onRequest'
       atts['xlink:show'] = 'new'
+      atts['audience'] = 'internal' unless is_digital_object_published?(digital_object)
       xml.dao(atts) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
       }
@@ -598,19 +578,22 @@ class EADSerializer < ASpaceExport::Serializer
       atts['xlink:show'] = file_version['xlink_show_attribute'] || 'new'
       atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
       atts['xlink:href'] = file_version['file_uri']
-      atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
+      atts['audience'] = 'internal' unless is_digital_object_published?(digital_object, file_version)
       xml.dao(atts) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
       }
     else
-      xml.daogrp( atts.merge( { 'xlink:type' => 'extended'} ) ) {
+      atts['xlink:type'] = 'extended'
+      atts['audience'] = 'internal' unless is_digital_object_published?(digital_object)
+      xml.daogrp( atts ) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
         file_versions_to_display.each do |file_version|
+          atts = {}
           atts['xlink:type'] = 'locator'
           atts['xlink:href'] = file_version['file_uri']
           atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
           atts['xlink:title'] = file_version['caption'] if file_version['caption']
-          atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
+          atts['audience'] = 'internal' unless is_digital_object_published?(digital_object, file_version)
           xml.daoloc(atts)
         end
       }
@@ -685,7 +668,7 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
-  def serialize_languages(languages, xml)
+  def serialize_languages(languages, xml, fragments)
     lm = []
     language_notes = languages.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
     if !language_notes.empty?
@@ -698,7 +681,7 @@ class EADSerializer < ASpaceExport::Serializer
           att ||= {}
 
           xml.send(note['type'], att.merge(audatt)) {
-            sanitize_mixed_content(content, xml,ASpaceExport::Utils.include_p?(note['type']))
+            sanitize_mixed_content(content, xml, fragments, ASpaceExport::Utils.include_p?(note['type']))
           }
           lm << note
         end
@@ -707,7 +690,9 @@ class EADSerializer < ASpaceExport::Serializer
         languages = languages.map{|l| l['language_and_script']}.compact
         xml.langmaterial {
           languages.map {|language|
-            punctuation = language.equal?(languages.last) ? '.' : ', '
+            # BC EDIT - remove annoying floating period at end of Language * fields
+            # punctuation = language.equal?(languages.last) ? '.' : ', '
+            punctuation = language.equal?(languages.last) ? '' : ', '
             lang_translation = I18n.t("enumerations.language_iso639_2.#{language['language']}", :default => language['language'])
             if language['script']
               xml.language(:langcode => language['language'], :scriptcode => language['script']) {
@@ -728,7 +713,9 @@ class EADSerializer < ASpaceExport::Serializer
       if !languages.empty?
         xml.langmaterial {
           languages.map {|language|
-            punctuation = language.equal?(languages.last) ? '.' : ', '
+            # BC EDIT - remove annoying floating period at end of Language * fields
+            #punctuation = language.equal?(languages.last) ? '.' : ', '
+            punctuation = language.equal?(languages.last) ? '' : ', '
             lang_translation = I18n.t("enumerations.language_iso639_2.#{language['language']}", :default => language['language'])
             if language['script']
               xml.language(:langcode => language['language'], :scriptcode => language['script']) {
