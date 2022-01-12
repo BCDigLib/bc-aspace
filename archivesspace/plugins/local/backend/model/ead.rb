@@ -5,6 +5,7 @@
 
 # BC local edits: 
 #  see method serialize_languages()
+#  see method serialize_digital_object()
 
 require 'nokogiri'
 require 'securerandom'
@@ -588,13 +589,17 @@ class EADSerializer < ASpaceExport::Serializer
       xml.daogrp( atts ) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
         file_versions_to_display.each do |file_version|
-          atts = {}
-          atts['xlink:type'] = 'locator'
-          atts['xlink:href'] = file_version['file_uri']
-          atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
-          atts['xlink:title'] = file_version['caption'] if file_version['caption']
-          atts['audience'] = 'internal' unless is_digital_object_published?(digital_object, file_version)
-          xml.daoloc(atts)
+          # BC EDIT 2022-01-11
+          # check for file_version objects that have a handle string as the file_uri value
+          if file_version['file_uri'].start_with?('http://hdl.handle.net')
+            atts = {}
+            atts['xlink:type'] = 'locator'
+            atts['xlink:href'] = file_version['file_uri']
+            atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
+            atts['xlink:title'] = file_version['caption'] if file_version['caption']
+            atts['audience'] = 'internal' unless is_digital_object_published?(digital_object, file_version)
+            xml.daoloc(atts)
+          end
         end
       }
     end
