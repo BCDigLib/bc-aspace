@@ -106,8 +106,12 @@ class EADConverter < Converter
 
   def self.configure
 
-    with 'ead' do |node|
-      make :resource
+    with 'ead' do |*|
+      make :resource, {
+        :publish => att('audience') != 'internal',
+        :finding_aid_language => 'und',
+        :finding_aid_script => 'Zyyy'
+      }
     end
 
     ignore "titlepage"
@@ -118,10 +122,14 @@ class EADConverter < Converter
     end
 
     with 'archdesc' do |*|
+      publish = if !context_obj.publish || (att('audience') == 'internal')
+                  false
+                else
+                  true
+                end
       set :level, att('level') || 'otherlevel'
       set :other_level, att('otherlevel')
-      set :publish, att('audience') != 'internal'
-      # set :publish, att('audience') == 'external'
+      set :publish, publish
     end
 
 
@@ -221,31 +229,71 @@ class EADConverter < Converter
       end
     end
 
+
     with "langmaterial" do |*|
-      # first, assign the primary language to the ead
+      # if <langmaterial> contains encoded <language> tags create a matching language_and_script record
       langmaterial = Nokogiri::XML::DocumentFragment.parse(inner_xml)
-      langmaterial.children.each do |child|
-        if child.name == 'language'
-          set ancestor(:resource, :archival_object), :language, child.attr("langcode")
-          break
+      if (language = langmaterial.xpath('.//language')).size != 0 && (langcode = langmaterial.xpath('.//language').attr('langcode'))
+        script = language.attr('scriptcode')
+        make :lang_material, {
+          :jsonmodel_type => 'lang_material',
+          :language_and_script => {
+            'jsonmodel_type' => 'language_and_script',
+            'language' => langcode.to_s,
+            'script' => script ? script.to_s : nil
+          }
+        } do |lang|
+        set ancestor(:resource, :archival_object), :lang_materials, lang
+        end
+      # if we don't have an encoded language inside the <langmaterial> set it to undetermined.
+      else
+        make :lang_material, {
+          :jsonmodel_type => 'lang_material',
+          :language_and_script => {
+            'jsonmodel_type' => 'language_and_script',
+            'language' => 'und'
+          }
+        } do |lang|
+        set ancestor(:resource, :archival_object), :lang_materials, lang
         end
       end
 
-      # write full tag content to a note, subbing out the language tags
+      # write full <langmaterial> content to a note, subbing out the language tags (if present)
       content = inner_xml
-      next if content =~ /\A<language langcode=\"[a-z]+\"\/>\Z/
-
-      if content.match(/\A<language langcode=\"[a-z]+\"\s*>([^<]+)<\/language>\Z/)
-        content = $1
+      if inner_xml.match(/(<language langcode="[a-z]+" scriptcode="[A-z]+">(.*)<\/language>)|(<language langcode="[a-z]+">(.*)<\/language>)|(<language langcode="[a-z]+"\/>)/)
+        content = inner_xml.sub(/(<language langcode="[a-z]+" scriptcode="[A-z]+">(.*)<\/language>)|(<language langcode="[a-z]+">(.*)<\/language>)|(<language langcode="[a-z]+"\/>)/, '\\2\\4')
       end
 
-      make :note_singlepart, {
-        :type => "langmaterial",
-        :persistent_id => att('id'),
-        :publish => att('audience') != 'internal',
-        :content => format_content( content.sub(/<head>.*?<\/head>/, '') )
-      } do |note|
-        set ancestor(:resource, :archival_object), :notes, note
+      unless content.nil? || content == ''
+        make :lang_material, {
+          :jsonmodel_type => 'lang_material',
+          :notes => {
+            'jsonmodel_type' => 'note_langmaterial',
+            'type' => 'langmaterial',
+            'persistent_id' => att('id'),
+            'publish' => att('audience') != 'internal',
+            'content' => [format_content( content.sub(/<head>.*?<\/head>/, '') )]
+          }
+        } do |note|
+          set ancestor(:resource, :archival_object), :lang_materials, note
+        end
+      end
+
+    end
+
+    # If we've gotten this far and still haven't hit a <langmaterial><language> we must assign an undetermined language value
+    with "archdesc/did" do |e|
+      if context_obj['jsonmodel_type'] == 'resource' && inner_xml.include?('<langmaterial>') == false
+        make :lang_material, {
+          :jsonmodel_type => 'lang_material',
+          :language_and_script => {
+            'jsonmodel_type' => 'language_and_script',
+            'language' => 'und'
+          }
+        } do |lang|
+        set ancestor(:resource, :archival_object), :lang_materials, lang
+        break
+        end
       end
     end
 
@@ -503,7 +551,7 @@ class EADConverter < Converter
 
     with 'chronlist' do |*|
       if  ancestor(:note_multipart)
-        left_overs = insert_into_subnotes
+        left_overs = insert_into_subnotes('chronlist')
       else
         left_overs = nil
         make :note_multipart, {
@@ -657,7 +705,7 @@ class EADConverter < Converter
       end
     end
 
-    def get_or_make_top_container(type, indicator, barcode, container_profile_name)
+    def get_or_make_top_container_uri(type, indicator, barcode, container_profile_name)
       # remember the top_containers we make in this hash
       # the values are top_container uris
       # the keys are barcodes or type:indicator
@@ -667,16 +715,16 @@ class EADConverter < Converter
       #   - type:indicator is not unique
       #       but only the last one seen will need to be added to
       #       so it's actually a blessing that prior ones get blatted
-      @top_containers ||= {}
+      @top_container_uris ||= {}
 
       if barcode
-        if (top_container_uri = @top_containers[barcode] || TopContainer.for_barcode(barcode))
-          return top_container_uri
+        if @top_container_uris[barcode]
+          return @top_container_uris[barcode]
+        elsif (TopContainer.for_barcode(barcode) && TopContainer.for_barcode(barcode).uri)
+          return TopContainer.for_barcode(barcode).uri
         end
-      else
-        if (top_container_uri = @top_containers["#{type}:#{indicator}"])
-          return top_container_uri
-        end
+      elsif @top_container_uris["#{type}:#{indicator}"]
+        return @top_container_uris["#{type}:#{indicator}"]
       end
 
       # don't make a container_profile, but link to one if there's a match
@@ -693,9 +741,9 @@ class EADConverter < Converter
       end
 
       if barcode
-        @top_containers[barcode] = context_obj.uri
+        @top_container_uris[barcode] = context_obj.uri
       else
-        @top_containers["#{type}:#{indicator}"] = context_obj.uri
+        @top_container_uris["#{type}:#{indicator}"] = context_obj.uri
       end
 
       context_obj.uri
@@ -753,7 +801,7 @@ class EADConverter < Converter
 
       instance = context_obj
 
-      top_container_uri = get_or_make_top_container(att('type'),
+      top_container_uri = get_or_make_top_container_uri(att('type'),
                                                     format_content(inner_xml),
                                                     barcode,
                                                     att("altrender"))
@@ -814,14 +862,31 @@ class EADConverter < Converter
       set :finding_aid_subtitle, format_content( inner_xml )
     end
 
-    with 'langusage' do |*|
-      set :finding_aid_language, format_content( inner_xml )
-    end
+    #with 'langusage' do |*|
+    #  set :finding_aid_language, format_content( inner_xml )
+    #end
 
+    with 'profiledesc' do |*|
+      profiledesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+      if !(langusage = profiledesc.xpath(".//langusage")).empty?
+        # If there is a langcode attribute inside a <language> element, set the finding_aid_language to that langcode and finding_aid_note to full element content
+        if (language = langusage.xpath('.//language')).size != 0 && (langcode = langusage.xpath('.//language').attr('langcode'))
+          set :finding_aid_language, langcode.to_s
+          if (script = language.attr('scriptcode'))
+            set :finding_aid_script, script.to_s
+          end
+        end
+        set :finding_aid_language_note, format_content( langusage.inner_text )
+      # if no <langusage>, set language to undetermined
+      else
+        set :finding_aid_language, 'und'
+      end
+    end
 
     with 'revisiondesc/change' do |*|
       make :revision_statement
       set ancestor(:resource), :revision_statements, proxy
+      set :publish, !(att('audience') === 'internal')
     end
 
     with 'revisiondesc/change/item' do |*|
@@ -982,7 +1047,8 @@ class EADConverter < Converter
   def make_corp_template(opts)
     return nil if inner_xml.strip.empty?
     make :agent_corporate_entity, {
-      :agent_type => 'agent_corporate_entity'
+      :agent_type => 'agent_corporate_entity',
+      :publish => att('audience') == 'external' ?  true : false
     } do |corp|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => corp.uri, 'role' => opts[:role]}
     end
@@ -1002,6 +1068,7 @@ class EADConverter < Converter
     return nil if inner_xml.strip.empty?
     make :agent_family, {
       :agent_type => 'agent_family',
+      :publish => att('audience') == 'external' ?  true : false
     } do |family|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => family.uri, 'role' => opts[:role]}
     end
@@ -1021,6 +1088,7 @@ class EADConverter < Converter
     return nil if inner_xml.strip.empty?
     make :agent_person, {
       :agent_type => 'agent_person',
+      :publish => att('audience') == 'external' ?  true : false
     } do |person|
       set ancestor(:resource, :archival_object), :linked_agents, {'ref' => person.uri, 'role' => opts[:role]}
     end

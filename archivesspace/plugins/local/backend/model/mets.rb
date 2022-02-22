@@ -1,5 +1,7 @@
-# This version of mets.rb partially addresses ANW-937: https://archivesspace.atlassian.net/browse/ANW-937
-# See PR #1751: https://github.com/archivesspace/archivesspace/pull/1751
+# most recent file version: v2.8.1
+# https://github.com/archivesspace/archivesspace/blob/v2.8.1/backend/app/exporters/serializers/mets.rb
+
+# Note: Method below is identical to source. This file can be removed from server.
 
 require 'time'
 
@@ -15,7 +17,6 @@ class METSSerializer < ASpaceExport::Serializer
              'xmlns:xlink' => 'http://www.w3.org/1999/xlink',
              'xmlns:xsi' => "http://www.w3.org/2001/XMLSchema-instance",
              'xsi:schemaLocation' => "http://www.loc.gov/METS/ http://www.loc.gov/standards/mets/mets.xsd"){
-
       xml.metsHdr(:CREATEDATE => Time.now.iso8601) {
         xml.agent(:ROLE => data.header_agent_role, :TYPE => data.header_agent_type) {
           xml.name data.header_agent_name
