@@ -1,5 +1,5 @@
-<!-- most recent file version: v2.8.1 -->
-<!-- https://github.com/archivesspace/archivesspace/blob/v2.8.1/frontend/app/views/top_containers/bulk_operations/_results.html.erb -->
+<!-- most recent file version: v3.1.1 -->
+<!-- https://github.com/archivesspace/archivesspace/blob/v3.1.1/frontend/app/views/top_containers/bulk_operations/_results.html.erb -->
 
 <% can_edit = user_can?("update_container_record") %>
 
@@ -58,7 +58,7 @@
           <% if doc['collection_identifier_stored_u_sstr'] %>
             <ul class="linked-records-listing count-<%= Array(doc['collection_identifier_stored_u_sstr']).length %>">
               <% Array(doc['collection_identifier_stored_u_sstr']).zip(Array(doc['collection_display_string_u_sstr'])).each do |identifier, display| %>
-                <li><span class="collection-identifier"><%= identifier %></span>, <span class="collection-display-string"><%= display %></span></li>
+                <li><span class="collection-identifier"><%= identifier %></span>, <span class="collection-display-string"><%= display %></span</li>
               <% end %>
             </ul>
           <% end %>
@@ -73,9 +73,8 @@
           <% end %>
         </td>
         <td class="top-container-profile"><%= Array(doc['container_profile_display_string_u_sstr']).first %></td>
-        <td class="top-container-type"><%= container_json['type'] %></td>
         <td class="top-container-indicator">
-          <!-- BEGIN Check if the accession was migrated. -->
+          <!-- BEGIN BC EDIT - Check if the accession was migrated. -->
           <% if container_json.dig("container_locations", 0, "note").nil? || container_json.dig("collection", 0, "ref").nil? %>
             <% if container_json['type'] && container_json['type'] != 'item' && container_json['type'] != 'object' %>
               <%= container_json['type'] %>
@@ -88,7 +87,7 @@
           <% else %>
             <%= container_json['indicator'] %>
           <% end %>
-          <!-- END Check if the accession was migrated. -->
+          <!-- END BC EDIT -->
         </td>
         <td class="top-container-barcode"><%= container_json['barcode'] %></td>
         <td class="top-container-current-location">
